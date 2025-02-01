@@ -131,7 +131,7 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
 
-            const response = await fetch('https://your-replit-api-url/register', { // Замените URL на ваш Replit API
+            const response = await fetch('https://b12cf61d-bf76-49cb-b610-f2050fa6a8a8-00-38a60af4t95s.sisko.replit.dev/', { // Замените URL на ваш Replit API
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
@@ -152,7 +152,7 @@
         async function loadBalance() {
             if (!userId) return;
 
-            const response = await fetch(`https://your-replit-api-url/get-balance/${userId}`); // Замените URL на ваш Replit API
+            const response = await fetch(`https://b12cf61d-bf76-49cb-b610-f2050fa6a8a8-00-38a60af4t95s.sisko.replit.dev//get-balance/${userId}`); // Замените URL на ваш Replit API
             const data = await response.json();
 
             if (data.balance !== undefined) {
@@ -175,7 +175,7 @@
             updateBalance(newBalance);
 
             // Сохраняем новый баланс на сервере
-            fetch(`https://your-replit-api-url/admin/set-balance`, { // Замените URL на ваш Replit API
+            fetch(`https://b12cf61d-bf76-49cb-b610-f2050fa6a8a8-00-38a60af4t95s.sisko.replit.dev//admin/set-balance`, { // Замените URL на ваш Replit API
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, newBalance: newBalance * 10 })
@@ -216,7 +216,7 @@
             updateBalance(newBalance);
 
             // Сохраняем новый баланс на сервере
-            fetch(`https://your-replit-api-url/admin/set-balance`, { // Замените URL на ваш Replit API
+            fetch(`https://b12cf61d-bf76-49cb-b610-f2050fa6a8a8-00-38a60af4t95s.sisko.replit.dev//admin/set-balance`, { // Замените URL на ваш Replit API
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, newBalance: newBalance * 10 })
