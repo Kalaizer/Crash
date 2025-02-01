@@ -1,107 +1,201 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Краш-игра</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #121212;
-            color: white;
-        }
-
-        .game-container {
-            margin-top: 50px;
-        }
-
-        canvas {
-            background-color: black;
-            width: 100%;
-            height: 300px;
-            border: 2px solid white;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crash Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #2c3e50;
+      color: #ecf0f1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      text-align: center;
+      width: 100%;
+      max-width: 600px;
+    }
+    #gameInfo {
+      margin: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #e74c3c;
+      border: none;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #c0392b;
+    }
+    #gameHistoryList {
+      list-style-type: none;
+      padding: 0;
+    }
+    #gameHistoryList li {
+      background-color: #34495e;
+      margin: 5px 0;
+      padding: 10px;
+    }
+    #userAuth {
+      margin-top: 20px;
+    }
+    input {
+      padding: 8px;
+      margin: 5px;
+      width: 200px;
+      border: 1px solid #ccc;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-    <div class="game-container">
-        <h1>Краш-игра</h1>
-        <canvas id="crashGraph"></canvas>
-        <h2 id="multiplier">x1.00</h2>
-        <p>История коэффициентов:</p>
-        <ul id="history"></ul>
+  <div class="container">
+    <h1>Crash Game</h1>
+    <div id="gameInfo">
+      <p>Current Coefficient: <span id="currentCoefficient">1.10</span></p>
+      <button id="startButton">Start Game</button>
     </div>
 
-    <script>
-        const graphCanvas = document.getElementById("crashGraph");
-        const ctx = graphCanvas.getContext("2d");
-        const multiplierDisplay = document.getElementById("multiplier");
-        const historyList = document.getElementById("history");
+    <h2>Game History (Last 10 Games)</h2>
+    <ul id="gameHistoryList"></ul>
 
-        let gameActive = false;
-        let multiplier = 1.0;
-        let lastMultipliers = [];
-        let interval;
-        let gameStartTime;
+    <div id="userAuth">
+      <h2>User Login</h2>
+      <form id="loginForm">
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+      </form>
+      <h2>Register User</h2>
+      <form id="registerForm">
+        <input type="text" id="registerUsername" placeholder="Username" required>
+        <input type="password" id="registerPassword" placeholder="Password" required>
+        <button type="submit">Register</button>
+      </form>
+    </div>
+  </div>
 
-        function startGame() {
-            if (gameActive) return;
-            gameActive = true;
-            multiplier = 1.0;
-            gameStartTime = Date.now();
+  <script>
+    let gameHistory = [];
+    let currentCoefficient = 1.10;
+    let gameInterval;
+    const gameHistoryList = document.getElementById('gameHistoryList');
+    const currentCoefficientElement = document.getElementById('currentCoefficient');
+    const startButton = document.getElementById('startButton');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const registerUsernameInput = document.getElementById('registerUsername');
+    const registerPasswordInput = document.getElementById('registerPassword');
+    const adminPassword = '1001'; // Пароль администратора
 
-            interval = setInterval(() => {
-                let elapsedTime = (Date.now() - gameStartTime) / 1000;
-                multiplier = (1 + elapsedTime / 5).toFixed(2);
-                multiplierDisplay.innerText = `x${multiplier}`;
+    let users = {}; // База данных пользователей
+    let loggedInUser = null; // Текущий вошедший пользователь
 
-                drawGraph(elapsedTime);
+    // Функция для обновления истории игр
+    function updateGameHistory() {
+      gameHistoryList.innerHTML = '';
+      gameHistory.forEach(game => {
+        const li = document.createElement('li');
+        li.textContent = `Game: ${game.coefficient}x - ${new Date(game.timestamp).toLocaleTimeString()}`;
+        gameHistoryList.appendChild(li);
+      });
+    }
 
-                if (Math.random() < 0.02 * elapsedTime) {
-                    endGame();
-                }
-            }, 100);
-        }
+    // Функция для начала игры
+    function startGame() {
+      if (currentCoefficient < 5) {
+        currentCoefficient = (currentCoefficient * (Math.random() * (1.5 - 1) + 1)).toFixed(2); // Увеличиваем коэффициент
+      }
+      currentCoefficientElement.textContent = currentCoefficient;
 
-        function endGame() {
-            clearInterval(interval);
-            gameActive = false;
-            lastMultipliers.unshift(multiplier);
-            if (lastMultipliers.length > 10) lastMultipliers.pop();
-            updateHistory();
-            setTimeout(startGame, 10000); // Новая игра через 10 секунд
-        }
+      // Добавляем в историю
+      gameHistory.push({ coefficient: currentCoefficient, timestamp: new Date() });
 
-        function updateHistory() {
-            historyList.innerHTML = "";
-            lastMultipliers.forEach(mult => {
-                let li = document.createElement("li");
-                li.textContent = `x${mult}`;
-                historyList.appendChild(li);
-            });
-        }
+      if (gameHistory.length > 10) {
+        gameHistory.shift(); // Убираем старые игры
+      }
 
-        function drawGraph(elapsedTime) {
-            ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
-            ctx.strokeStyle = "green";
-            ctx.lineWidth = 2;
+      updateGameHistory();
+    }
 
-            ctx.beginPath();
-            for (let i = 0; i <= elapsedTime * 10; i++) {
-                let x = (i / (elapsedTime * 10)) * graphCanvas.width;
-                let y = graphCanvas.height - (Math.pow(1 + i / 100, 2) * 10);
-                ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-        }
-
+    // Функция для автоматического старта игры каждые 10 секунд
+    function startAutoGames() {
+      setInterval(() => {
         startGame();
-    </script>
+      }, 10000); // Каждые 10 секунд
+    }
+
+    // Функция для регистрации пользователя
+    registerForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const username = registerUsernameInput.value;
+      const password = registerPasswordInput.value;
+
+      if (users[username]) {
+        alert('User already exists!');
+        return;
+      }
+
+      users[username] = { password, balance: 100 };
+      alert('User registered successfully!');
+      registerForm.reset();
+    });
+
+    // Функция для авторизации пользователя
+    loginForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const username = usernameInput.value;
+      const password = passwordInput.value;
+
+      if (!users[username] || users[username].password !== password) {
+        alert('Invalid username or password');
+        return;
+      }
+
+      loggedInUser = username;
+      alert('Login successful!');
+      loginForm.classList.add('hidden');
+      registerForm.classList.add('hidden');
+      startButton.classList.remove('hidden');
+      startAutoGames(); // Запуск игры при авторизации
+    });
+
+    // Админ-панель
+    function adminPanel() {
+      const password = prompt('Enter admin password');
+      if (password === adminPassword) {
+        const userToAddMoney = prompt('Enter username to add money');
+        const amountToAdd = parseFloat(prompt('Enter amount to add'));
+
+        if (users[userToAddMoney]) {
+          users[userToAddMoney].balance += amountToAdd;
+          alert('Funds added successfully!');
+        } else {
+          alert('User not found!');
+        }
+      } else {
+        alert('Invalid admin password!');
+      }
+    }
+
+    startButton.addEventListener('click', () => {
+      startGame(); // Запуск игры по кнопке
+    });
+
+    // Запуск игры автоматически
+    startAutoGames();
+
+  </script>
 </body>
 </html>
