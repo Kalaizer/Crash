@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,54 +9,30 @@
       background-color: #121212;
       color: #fff;
       font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      text-align: center;
       margin: 0;
-      flex-direction: column;
+      padding: 20px;
     }
 
     .container {
-      text-align: center;
       background-color: #1c1c1c;
       padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-      width: 350px;
+      border-radius: 10px;
+      display: inline-block;
     }
 
     h1 {
       color: #ff6f00;
-      font-size: 3em;
     }
 
     .button {
       background-color: #ff6f00;
       border: none;
-      padding: 12px;
+      padding: 10px;
       font-size: 1.2em;
       margin: 10px;
       cursor: pointer;
       border-radius: 5px;
-      transition: transform 0.3s, background-color 0.3s;
-    }
-
-    .button:hover {
-      background-color: #e65c00;
-      transform: scale(1.1);
-    }
-
-    .button:active {
-      background-color: #ff4500;
-    }
-
-    .input-field {
-      margin: 10px 0;
-      padding: 10px;
-      font-size: 1.2em;
-      border-radius: 5px;
-      border: none;
     }
 
     .history {
@@ -71,48 +47,35 @@
       background-color: #333;
       padding: 10px;
       border-radius: 5px;
-      text-align: center;
+      width: 300px;
+      margin: 20px auto;
     }
 
-    .admin-input {
-      padding: 8px;
-      margin: 10px;
-      font-size: 1.2em;
+    input {
+      padding: 10px;
+      margin: 5px;
       border-radius: 5px;
-      border: none;
+      font-size: 1em;
     }
-
-    .admin-button {
-      background-color: #ff6f00;
-      padding: 10px 20px;
-      font-size: 1.2em;
-      cursor: pointer;
-      border-radius: 5px;
-      margin-top: 10px;
-    }
-
   </style>
 </head>
 <body>
+
   <div class="container">
     <h1>Crash Game</h1>
-    <div>
-      <input type="number" id="betAmount" class="input-field" placeholder="Введите ставку" />
-    </div>
-    <div>
-      <button class="button" id="withdrawBtn">Вывести</button>
-    </div>
-    <div id="balance">Баланс: 1000.0</div>
-    <div id="currentCoefficient">Коэффициент: 1.00x</div>
-    <div id="predictedWin">Предполагаемый выигрыш: 0.00</div>
+    <input type="number" id="betAmount" placeholder="Введите ставку">
+    <button class="button" id="withdrawBtn">Вывести</button>
+    <p id="balance">Баланс: 1000.0</p>
+    <p id="currentCoefficient">Коэффициент: 1.00x</p>
+    <p id="predictedWin">Возможный выигрыш: 0.00</p>
     <div id="history" class="history">История последних игр:</div>
   </div>
 
   <div class="admin-panel">
     <h3>Админ-панель</h3>
-    <input type="password" id="adminPassword" class="admin-input" placeholder="Введите пароль" />
-    <input type="number" id="adminAmount" class="admin-input" placeholder="Сумма для пополнения" />
-    <button class="admin-button" id="adminAddMoney">Добавить деньги</button>
+    <input type="password" id="adminPassword" placeholder="Пароль">
+    <input type="number" id="adminAmount" placeholder="Сумма для пополнения">
+    <button class="button" id="adminAddMoney">Добавить деньги</button>
   </div>
 
   <script>
@@ -120,11 +83,10 @@
     let betAmount = 0;
     let currentCoefficient = 1;
     let gameHistory = [];
-    let gameInterval;
-    let activeBet = null;  
-    let gameInProgress = false;  
+    let activeBet = null;
+    let gameInProgress = false;
     const MAX_COEFFICIENT = 1000;
-    const ADMIN_PASSWORD = '1001';  
+    const ADMIN_PASSWORD = '1001';
 
     const betAmountInput = document.getElementById('betAmount');
     const balanceText = document.getElementById('balance');
@@ -141,14 +103,13 @@
     }
 
     function startGame() {
-      if (gameInProgress) return;  
+      if (gameInProgress) return;
       gameInProgress = true;
-      
       currentCoefficient = 1;
-      activeBet = parseFloat(betAmountInput.value) || 0;  
+      activeBet = parseFloat(betAmountInput.value) || 0;
 
       if (activeBet > balance) {
-        alert('У вас недостаточно средств для этой ставки!');
+        alert('Недостаточно средств!');
         gameInProgress = false;
         return;
       }
@@ -157,8 +118,9 @@
       balanceText.textContent = `Баланс: ${roundToTenth(balance)} рублей`;
 
       let interval = setInterval(() => {
-        currentCoefficient += 0.05;
+        currentCoefficient += 0.1;
         currentCoefficientText.textContent = `Коэффициент: ${roundToTenth(currentCoefficient)}x`;
+        updatePredictedWin();
 
         if (currentCoefficient >= MAX_COEFFICIENT) {
           clearInterval(interval);
@@ -169,42 +131,45 @@
       setTimeout(() => {
         clearInterval(interval);
         endGame();
-      }, Math.random() * 5000 + 5000);  
+      }, Math.random() * 5000 + 5000);
     }
 
     function endGame() {
       gameInProgress = false;
       let finalCoefficient = roundToTenth(currentCoefficient);
       
-      gameHistory.unshift(finalCoefficient);
-      if (gameHistory.length > 10) {
-        gameHistory.pop();
+      if (!gameHistory.includes(finalCoefficient)) {
+        gameHistory.unshift(finalCoefficient);
+        if (gameHistory.length > 10) gameHistory.pop();
       }
 
-      historyElement.innerHTML = `История последних игр: <br>` + gameHistory.map(c => `<p>${c}x</p>`).join('');
+      historyElement.innerHTML = `История последних игр:<br>` + gameHistory.map(c => `<p>${c}x</p>`).join('');
     }
 
-    setInterval(startGame, 5000);
+    function updatePredictedWin() {
+      if (activeBet > 0) {
+        predictedWinText.textContent = `Возможный выигрыш: ${roundToTenth(activeBet * currentCoefficient)}`;
+      } else {
+        predictedWinText.textContent = `Возможный выигрыш: 0.00`;
+      }
+    }
 
     withdrawBtn.addEventListener('click', function() {
       if (!gameInProgress || !activeBet) {
-        alert('Нет активной игры или ставки для вывода!');
+        alert('Нет активной игры или ставки!');
         return;
       }
 
-      const predictedWin = roundToTenth(currentCoefficient * activeBet);
-      balance += predictedWin;
+      let winnings = roundToTenth(activeBet * currentCoefficient);
+      balance += winnings;
       balanceText.textContent = `Баланс: ${roundToTenth(balance)} рублей`;
       activeBet = null;
-      predictedWinText.textContent = `Предполагаемый выигрыш: 0.00`;
+      predictedWinText.textContent = `Возможный выигрыш: 0.00`;
 
-      alert(`Вы вывели ${predictedWin} рублей!`);
+      alert(`Вы вывели ${winnings} рублей!`);
     });
 
-    betAmountInput.addEventListener('input', function() {
-      const predictedWin = roundToTenth(currentCoefficient * parseFloat(betAmountInput.value));
-      predictedWinText.textContent = `Предполагаемый выигрыш: ${predictedWin}`;
-    });
+    betAmountInput.addEventListener('input', updatePredictedWin);
 
     adminAddMoneyBtn.addEventListener('click', function() {
       const password = adminPasswordInput.value;
@@ -218,6 +183,9 @@
         alert('Неверный пароль или некорректная сумма!');
       }
     });
+
+    setInterval(startGame, 5000);
   </script>
+
 </body>
 </html>
