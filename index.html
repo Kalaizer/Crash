@@ -103,7 +103,7 @@
       <button class="button" id="withdrawBtn">Вывести</button>
       <button class="button" id="adminPanelBtn">Панель Админа</button>
     </div>
-    <div id="balance">Баланс: 1000</div>
+    <div id="balance">Баланс: 1000.0</div>
     <div id="currentCoefficient">Коэффициент: 1.00x</div>
     <div id="predictedWin">Предполагаемый выигрыш: 0.00</div>
     <div class="graph-container">
@@ -137,6 +137,10 @@
     const winAudio = document.getElementById('winAudio');
     const withdrawBtn = document.getElementById('withdrawBtn');
     const adminPanelBtn = document.getElementById('adminPanelBtn');
+
+    function roundToTenth(num) {
+      return Math.round(num * 10) / 10;
+    }
 
     function updateGraph() {
       const scale = currentCoefficient / 1000;  // нормализуем коэффициент, чтобы он подходил для графика
@@ -176,10 +180,12 @@
           if (isWin) {
             winAudio.play();
             balance += activeBet * currentCoefficient;
-            alert(`Вы выиграли! Ваш выигрыш: ${activeBet * currentCoefficient}`);
+            balance = roundToTenth(balance);
+            alert(`Вы выиграли! Ваш выигрыш: ${roundToTenth(activeBet * currentCoefficient)}`);
           } else {
             explosionAudio.play();
             balance -= activeBet;
+            balance = roundToTenth(balance);
             alert('Вы проиграли!');
           }
 
@@ -213,7 +219,8 @@
       }
 
       balance -= betAmount;
-      balanceText.textContent = `Баланс: ${balance.toFixed(2)}`;
+      balance = roundToTenth(balance);
+      balanceText.textContent = `Баланс: ${balance.toFixed(1)}`;
       startGame();
     });
 
