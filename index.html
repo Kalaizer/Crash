@@ -15,6 +15,7 @@
       height: 100vh;
       margin: 0;
       transition: all 0.3s ease-in-out;
+      flex-direction: column;
     }
 
     .container {
@@ -92,10 +93,16 @@
 
     .admin-panel {
       margin-top: 20px;
-      padding: 10px;
+      padding: 15px;
       background-color: #444;
       border-radius: 5px;
       color: #ff6f00;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      text-align: center;
     }
   </style>
 </head>
@@ -108,7 +115,6 @@
     <div>
       <button class="button" id="startGameBtn">Старт</button>
       <button class="button" id="withdrawBtn">Вывести</button>
-      <button class="button" id="adminPanelBtn">Панель Админа</button>
     </div>
     <div id="balance">Баланс: 1000.0</div>
     <div id="currentCoefficient">Коэффициент: 1.00x</div>
@@ -117,16 +123,20 @@
       <div class="graph" id="graph"></div>
     </div>
     <div id="history" class="history">История последних игр:</div>
-    <div id="adminPanel" class="admin-panel hidden">
-      <h3>Панель администратора</h3>
-      <input type="password" id="adminPassword" placeholder="Введите пароль" class="input-field" />
-      <button class="button" id="adminLoginBtn">Войти</button>
-      <button class="button hidden" id="adminBalanceBtn">Безлимитный баланс</button>
-    </div>
   </div>
 
   <audio id="explosionAudio" src="explosion.mp3" preload="auto"></audio>
   <audio id="winAudio" src="win.mp3" preload="auto"></audio>
+
+  <div id="adminPanel" class="admin-panel hidden">
+    <h3>Панель администратора</h3>
+    <input type="password" id="adminPassword" placeholder="Введите пароль" class="input-field" />
+    <button class="button" id="adminLoginBtn">Войти</button>
+    <div id="adminControls" class="hidden">
+      <input type="number" id="adminBalanceAmount" class="input-field" placeholder="Сумма для добавления" />
+      <button class="button" id="adminAddBalanceBtn">Добавить к балансу</button>
+    </div>
+  </div>
 
   <script>
     let balance = 1000;
@@ -134,11 +144,11 @@
     let currentCoefficient = 1;
     let gameHistory = [];
     let gameInterval;
-    let coefficientIncreaseRate = 0.01;  // начальная скорость увеличения коэффициента
+    let coefficientIncreaseRate = 0.07;  // увеличенная скорость роста коэффициента
     let timeElapsed = 0;  // время, прошедшее с начала игры
     const MAX_COEFFICIENT = 1000;
     let activeBet = null;  // Ставка, сделанная пользователем на текущую игру
-    const ADMIN_PASSWORD = '1001';  // Пароль для входа в панель администратора
+    const ADMIN_PASSWORD = '1001';  // Пароль для админ-панели
 
     const startGameBtn = document.getElementById('startGameBtn');
     const betAmountInput = document.getElementById('betAmount');
@@ -150,11 +160,12 @@
     const explosionAudio = document.getElementById('explosionAudio');
     const winAudio = document.getElementById('winAudio');
     const withdrawBtn = document.getElementById('withdrawBtn');
-    const adminPanelBtn = document.getElementById('adminPanelBtn');
     const adminPanel = document.getElementById('adminPanel');
     const adminPasswordInput = document.getElementById('adminPassword');
     const adminLoginBtn = document.getElementById('adminLoginBtn');
-    const adminBalanceBtn = document.getElementById('adminBalanceBtn');
+    const adminControls = document.getElementById('adminControls');
+    const adminBalanceAmountInput = document.getElementById('adminBalanceAmount');
+    const adminAddBalanceBtn = document.getElementById('adminAddBalanceBtn');
 
     function roundToTenth(num) {
       return Math.round(num * 10) / 10;
@@ -169,7 +180,7 @@
     function startGame() {
       currentCoefficient = 1;
       timeElapsed = 0;  // сброс времени
-      coefficientIncreaseRate = 0.01;  // сброс начальной скорости увеличения
+      coefficientIncreaseRate = 0.07;  // сброс скорости увеличения коэффициента
       activeBet = betAmount;  // Сохраняем текущую ставку
       updateGraph();
 
@@ -178,7 +189,7 @@
         currentCoefficient += coefficientIncreaseRate;  // увеличение коэффициента
 
         // Ускорение роста коэффициента с течением времени
-        coefficientIncreaseRate += 0.001;  // скорость увеличения коэффициента
+        coefficientIncreaseRate += 0.01;  // скорость увеличения коэффициента
 
         // Ограничение максимального коэффициента
         if (currentCoefficient >= MAX_COEFFICIENT) {
@@ -252,24 +263,27 @@
       alert(`Вы можете вывести ${predictedWin.toFixed(2)}. Если хотите вывести средства, нажмите "Вывести".`);
     });
 
-    adminPanelBtn.addEventListener('click', () => {
-      adminPanel.classList.toggle('hidden');
-    });
-
     adminLoginBtn.addEventListener('click', () => {
       const enteredPassword = adminPasswordInput.value;
       if (enteredPassword === ADMIN_PASSWORD) {
-        adminBalanceBtn.classList.remove('hidden');
+        adminControls.classList.remove('hidden');
         alert('Вы успешно вошли в панель администратора.');
       } else {
         alert('Неверный пароль.');
       }
     });
 
-    adminBalanceBtn.addEventListener('click', () => {
-      balance = Infinity;
-      balanceText.textContent = `Баланс: Безлимитный`;
-      alert('Баланс установлен на безлимитный!');
+    adminAddBalanceBtn.addEventListener('click', () => {
+      const amountToAdd = parseFloat(adminBalanceAmountInput.value);
+      if (isNaN(amountToAdd) || amountToAdd <= 0) {
+        alert('Введите корректную сумму.');
+        return;
+      }
+
+      balance += amountToAdd;
+      balance = roundToTenth(balance);
+      balanceText.textContent = `Баланс: ${balance.toFixed(1)}`;
+      alert(`Баланс увеличен на ${amountToAdd}`);
     });
 
   </script>
