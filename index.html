@@ -182,3 +182,66 @@
       });
       ctx.strokeStyle = '#ecf0f1';
       ctx.stroke();
+    }
+
+    // Функция для увеличения коэффициента
+    function increaseCoefficient() {
+      currentCoefficient = (currentCoefficient * (Math.random() * (1.5 - 1) + 1)).toFixed(2);
+      currentCoefficientElement.textContent = currentCoefficient;
+      updateGraph(); // Обновляем график
+    }
+
+    // Функция для начала игры
+    function startGame() {
+      increaseCoefficient();
+
+      // Добавляем в историю
+      gameHistory.push({ coefficient: currentCoefficient, timestamp: new Date() });
+
+      if (gameHistory.length > 10) {
+        gameHistory.shift(); // Убираем старые игры
+      }
+
+      updateGameHistory();
+    }
+
+    // Функция для автоматического старта игры каждые 10 секунд
+    function startAutoGames() {
+      setInterval(() => {
+        startGame();
+      }, 10000); // Каждые 10 секунд
+    }
+
+    // Функция для регистрации пользователя
+    registerForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const username = registerUsernameInput.value;
+      const password = registerPasswordInput.value;
+
+      if (users[username]) {
+        alert('User already exists!');
+        return;
+      }
+
+      users[username] = { password, balance: 100 };
+      alert('User registered successfully!');
+      registerForm.reset();
+    });
+
+    // Функция для авторизации пользователя
+    loginForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const username = usernameInput.value;
+      const password = passwordInput.value;
+
+      if (!users[username] || users[username].password !== password) {
+        alert('Invalid username or password');
+        return;
+      }
+
+      loggedInUser = username;
+      alert('Login successful!');
+      loginForm.classList.add('hidden');
+      registerForm.classList.add('hidden');
+      startButton.classList.remove('hidden');
+      betButton.classList
