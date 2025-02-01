@@ -6,7 +6,7 @@
   <title>Crash Game</title>
   <style>
     body {
-      background-color: #121212;
+      background: linear-gradient(to bottom, #1a1a1a, #292929);
       color: #fff;
       font-family: Arial, sans-serif;
       text-align: center;
@@ -15,24 +15,32 @@
     }
 
     .container {
-      background-color: #1c1c1c;
+      background: #222;
       padding: 20px;
       border-radius: 10px;
       display: inline-block;
+      box-shadow: 0 0 10px rgba(255, 111, 0, 0.7);
     }
 
     h1 {
       color: #ff6f00;
+      text-shadow: 0px 0px 10px #ff6f00;
     }
 
     .button {
-      background-color: #ff6f00;
+      background: linear-gradient(to right, #ff9800, #ff6f00);
       border: none;
-      padding: 10px;
+      padding: 10px 20px;
       font-size: 1.2em;
       margin: 10px;
       cursor: pointer;
       border-radius: 5px;
+      color: #fff;
+      transition: 0.3s;
+    }
+
+    .button:hover {
+      background: linear-gradient(to right, #ffb74d, #ff6f00);
     }
 
     .history {
@@ -40,6 +48,9 @@
       padding: 10px;
       background-color: #333;
       border-radius: 5px;
+      max-width: 300px;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .admin-panel {
@@ -47,7 +58,7 @@
       background-color: #333;
       padding: 5px;
       border-radius: 5px;
-      width: 200px;
+      width: 180px;
       margin: 10px auto;
       font-size: 0.9em;
     }
@@ -57,6 +68,7 @@
       margin: 3px;
       border-radius: 5px;
       font-size: 1em;
+      text-align: center;
     }
   </style>
 </head>
@@ -151,7 +163,7 @@
         currentCoefficientText.textContent = `Коэффициент: ${currentCoefficient.toFixed(2)}x`;
         updatePredictedWin();
 
-        speed = Math.max(20, speed * 0.98);
+        speed = Math.max(10, speed * 0.98);
         clearInterval(interval);
         interval = setInterval(arguments.callee, speed);
 
@@ -164,7 +176,7 @@
       setTimeout(() => {
         clearInterval(interval);
         endGame();
-      }, Math.random() * 5000 + 5000);
+      }, Math.random() * 7000 + 5000);
     }
 
     function endGame() {
@@ -190,37 +202,21 @@
     }
 
     placeBetBtn.addEventListener('click', function() {
-      if (gameInProgress) {
-        alert('Ставки закрыты! Ждите следующего раунда.');
-        return;
-      }
-
       let bet = parseFloat(betAmountInput.value);
-      if (bet <= 0 || bet > balance) {
-        alert('Некорректная ставка!');
-        return;
-      }
+      if (bet <= 0 || bet > balance) return;
 
       activeBet = bet;
       balance -= bet;
       updateBalanceDisplay();
-
-      alert(`Ставка принята: ${bet} рублей!`);
     });
 
     withdrawBtn.addEventListener('click', function() {
-      if (!gameInProgress || activeBet === null) {
-        alert('Вы не можете вывести средства!');
-        return;
-      }
+      if (!gameInProgress || activeBet === null) return;
 
       let winnings = roundToTenth(activeBet * currentCoefficient);
       balance += winnings;
       updateBalanceDisplay();
       activeBet = null;
-      predictedWinText.textContent = `Возможный выигрыш: 0.00`;
-
-      alert(`Вы вывели ${winnings} рублей!`);
     });
 
     adminAddMoneyBtn.addEventListener('click', function() {
