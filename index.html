@@ -62,10 +62,14 @@
             font-size: 14px;
         }
 
-        #countdownTimer {
-            margin-top: 10px;
-            font-size: 18px;
-            font-weight: bold;
+        #adminPanel {
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        #adminPanel button {
+            background-color: #FF4500;
+            color: white;
         }
     </style>
 </head>
@@ -100,22 +104,33 @@
             <h3>Последние 10 коэффициентов:</h3>
             <ul id="multipliersList"></ul>
         </div>
+
+        <!-- Панель администратора -->
+        <div id="adminPanel">
+            <button id="openAdminPanel">Панель админа</button>
+            <div id="adminControls" style="display: none;">
+                <input type="password" id="adminPassword" placeholder="Введите пароль админа">
+                <input type="number" id="newBalance" placeholder="Новый баланс (в рублях)">
+                <button id="setBalance">Изменить баланс</button>
+            </div>
+        </div>
     </div>
 
     <script>
         let userId = null;
-        let gameInterval = null;
-        const graphCanvas = document.getElementById('crashGraph');
-        const ctx = graphCanvas.getContext('2d');
+        let isAdminPanelOpen = false;
 
         // Очистка графика
         function clearGraph() {
+            const graphCanvas = document.getElementById('crashGraph');
+            const ctx = graphCanvas.getContext('2d');
             ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
         }
 
         // Отрисовка графика с цветовой градацией
         function drawGraph(multiplier, step) {
-            clearGraph();
+            const graphCanvas = document.getElementById('crashGraph');
+            const ctx = graphCanvas.getContext('2d');
 
             const x = step * 2; // Шаг по оси X
             const y = graphCanvas.height - (multiplier * 10); // Высота линии
@@ -245,7 +260,7 @@
                 await fetch('https://your-replit-project-name.your-username.repl.dev/admin/set-balance', { // ЗАМЕНИТЕ НА СВОЙ URL
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, newBalance: newBalance * 10 })
+                    body: JSON.stringify({ userId, newBalance: newBalance * 10, adminPassword: '1001' })
                 });
 
                 alert(`Вы забрали выигрыш! Ваш новый баланс: ${newBalance.toFixed(2)} ₽`);
@@ -277,6 +292,43 @@
         // Обновляем список каждые 5 секунд
         setInterval(fetchLastMultipliers, 5000);
         fetchLastMultipliers(); // Первичное получение
+
+        // Панель администратора
+        document.getElementById('openAdminPanel').addEventListener('click', () => {
+            const adminControls = document.getElementById('adminControls');
+            if (isAdminPanelOpen) {
+                adminControls.style.display = 'none';
+                isAdminPanelOpen = false;
+            } else {
+                adminControls.style.display = 'block';
+                isAdminPanelOpen = true;
+            }
+        });
+
+        // Изменение баланса через админ-панель
+        document.getElementById('setBalance').addEventListener('click', async () => {
+            const adminPassword = document.getElementById('adminPassword').value;
+            const newBalance = parseFloat(document.getElementById('newBalance').value);
+
+            if (!userId || isNaN(newBalance) || adminPassword !== '1001') {
+                alert("Неверный пароль администратора или данные введены некорректно!");
+                return;
+            }
+
+            try {
+                await fetch('https://your-replit-project-name.your-username.repl.dev/admin/set-balance', { // ЗАМЕНИТЕ НА СВОЙ URL
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, newBalance: newBalance * 10, adminPassword: '1001' })
+                });
+
+                alert("Баланс успешно изменен!");
+                loadBalance();
+            } catch (error) {
+                console.error(error);
+                alert("Не удалось изменить баланс. Попробуйте позже.");
+            }
+        });
     </script>
 </body>
 </html>
