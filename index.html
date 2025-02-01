@@ -14,6 +14,7 @@
       align-items: center;
       height: 100vh;
       margin: 0;
+      flex-direction: column;
     }
     .container {
       text-align: center;
@@ -65,6 +66,12 @@
       margin-top: 20px;
       border-radius: 5px;
     }
+    #graphCanvas {
+      width: 100%;
+      height: 300px;
+      background-color: #34495e;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -75,10 +82,15 @@
       <p>Balance: <span id="userBalance" class="balance">100</span> Coins</p>
       <button id="startButton" class="hidden">Start Game</button>
       <button id="betButton" class="hidden">Place Bet</button>
+      <div id="betAmountSection" class="hidden">
+        <input type="number" id="betAmount" placeholder="Enter bet amount" min="1" required>
+      </div>
     </div>
 
     <h2>Game History (Last 10 Games)</h2>
     <ul id="gameHistoryList"></ul>
+
+    <canvas id="graphCanvas"></canvas>
 
     <div id="userAuth">
       <h2>User Login</h2>
@@ -98,18 +110,24 @@
     <div class="admin-panel hidden">
       <h2>Admin Panel</h2>
       <button id="adminButton">Admin Access (Password Required)</button>
+      <div id="adminForm" class="hidden">
+        <input type="number" id="adminAmount" placeholder="Amount to add">
+        <button id="addBalanceButton">Add Balance</button>
+      </div>
     </div>
   </div>
 
   <script>
     let gameHistory = [];
     let currentCoefficient = 1.10;
-    let gameInterval;
     let userBalance = 100;
+    let gameInterval;
     const gameHistoryList = document.getElementById('gameHistoryList');
     const currentCoefficientElement = document.getElementById('currentCoefficient');
     const startButton = document.getElementById('startButton');
     const betButton = document.getElementById('betButton');
+    const betAmountSection = document.getElementById('betAmountSection');
+    const betAmountInput = document.getElementById('betAmount');
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const usernameInput = document.getElementById('username');
@@ -120,9 +138,15 @@
     const adminPanel = document.querySelector('.admin-panel');
     const adminButton = document.getElementById('adminButton');
     const adminPassword = '1001'; // Пароль администратора
+    const adminForm = document.getElementById('adminForm');
+    const adminAmountInput = document.getElementById('adminAmount');
+    const addBalanceButton = document.getElementById('addBalanceButton');
+    const graphCanvas = document.getElementById('graphCanvas');
+    const ctx = graphCanvas.getContext('2d');
 
     let users = {}; // База данных пользователей
     let loggedInUser = null; // Текущий вошедший пользователь
+    let graphData = []; // Данные для графика
 
     // Функция для обновления истории игр
     function updateGameHistory() {
@@ -134,103 +158,27 @@
       });
     }
 
-    // Функция для начала игры
-    function startGame() {
-      if (currentCoefficient < 5) {
-        currentCoefficient = (currentCoefficient * (Math.random() * (1.5 - 1) + 1)).toFixed(2); // Увеличиваем коэффициент
-      }
-      currentCoefficientElement.textContent = currentCoefficient;
+    // Функция для отображения графика
+    function updateGraph() {
+      const maxGames = 20; // Ограничение по количеству игр на графике
+      graphData.push(currentCoefficient);
 
-      // Добавляем в историю
-      gameHistory.push({ coefficient: currentCoefficient, timestamp: new Date() });
-
-      if (gameHistory.length > 10) {
-        gameHistory.shift(); // Убираем старые игры
+      if (graphData.length > maxGames) {
+        graphData.shift(); // Убираем старые данные, чтобы не заполнять память
       }
 
-      updateGameHistory();
-    }
+      ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
 
-    // Функция для автоматического старта игры каждые 10 секунд
-    function startAutoGames() {
-      setInterval(() => {
-        startGame();
-      }, 10000); // Каждые 10 секунд
-    }
-
-    // Функция для регистрации пользователя
-    registerForm.addEventListener('submit', event => {
-      event.preventDefault();
-      const username = registerUsernameInput.value;
-      const password = registerPasswordInput.value;
-
-      if (users[username]) {
-        alert('User already exists!');
-        return;
-      }
-
-      users[username] = { password, balance: 100 };
-      alert('User registered successfully!');
-      registerForm.reset();
-    });
-
-    // Функция для авторизации пользователя
-    loginForm.addEventListener('submit', event => {
-      event.preventDefault();
-      const username = usernameInput.value;
-      const password = passwordInput.value;
-
-      if (!users[username] || users[username].password !== password) {
-        alert('Invalid username or password');
-        return;
-      }
-
-      loggedInUser = username;
-      alert('Login successful!');
-      loginForm.classList.add('hidden');
-      registerForm.classList.add('hidden');
-      startButton.classList.remove('hidden');
-      betButton.classList.remove('hidden');
-      userBalanceElement.textContent = users[loggedInUser].balance;
-      startAutoGames(); // Запуск игры при авторизации
-    });
-
-    // Функция для размещения ставки
-    betButton.addEventListener('click', () => {
-      if (users[loggedInUser].balance <= 0) {
-        alert('You don\'t have enough coins!');
-        return;
-      }
-
-      // Снимаем ставку с баланса
-      users[loggedInUser].balance -= 10;
-      userBalanceElement.textContent = users[loggedInUser].balance;
-
-      // Можно добавить логику выигрыша/проигрыша ставки
-      alert(`You placed a bet!`);
-    });
-
-    // Панель администратора
-    adminButton.addEventListener('click', () => {
-      const password = prompt('Enter admin password');
-      if (password === adminPassword) {
-        const userToAddMoney = prompt('Enter username to add money');
-        const amountToAdd = parseFloat(prompt('Enter amount to add'));
-
-        if (users[userToAddMoney]) {
-          users[userToAddMoney].balance += amountToAdd;
-          alert('Funds added successfully!');
+      // Рисуем график
+      ctx.beginPath();
+      graphData.forEach((value, index) => {
+        const x = (graphCanvas.width / maxGames) * index;
+        const y = graphCanvas.height - (value * graphCanvas.height) / 5; // Сжимаем коэффициент
+        if (index === 0) {
+          ctx.moveTo(x, y);
         } else {
-          alert('User not found!');
+          ctx.lineTo(x, y);
         }
-      } else {
-        alert('Invalid admin password!');
-      }
-    });
-
-    // Запуск игры автоматически
-    startAutoGames();
-
-  </script>
-</body>
-</html>
+      });
+      ctx.strokeStyle = '#ecf0f1';
+      ctx.stroke();
