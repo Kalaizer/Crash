@@ -100,11 +100,10 @@
     </div>
     <div>
       <button class="button" id="startGameBtn">Старт</button>
-      <button class="button" id="autoGameBtn">Автоигра</button>
-      <button class="button" id="adminPanelBtn">Панель Админа</button>
     </div>
     <div id="balance">Баланс: 1000</div>
     <div id="currentCoefficient">Коэффициент: 1.00x</div>
+    <div id="predictedWin">Предполагаемый выигрыш: 0.00</div>
     <div class="graph-container">
       <div class="graph" id="graph"></div>
     </div>
@@ -117,17 +116,14 @@
   <script>
     let balance = 1000;
     let betAmount = 0;
-    let gameInterval;
-    let isAutoPlaying = false;
     let currentCoefficient = 1;
     let gameHistory = [];
 
     const startGameBtn = document.getElementById('startGameBtn');
-    const autoGameBtn = document.getElementById('autoGameBtn');
-    const adminPanelBtn = document.getElementById('adminPanelBtn');
     const betAmountInput = document.getElementById('betAmount');
     const balanceText = document.getElementById('balance');
     const currentCoefficientText = document.getElementById('currentCoefficient');
+    const predictedWinText = document.getElementById('predictedWin');
     const graphElement = document.getElementById('graph');
     const historyElement = document.getElementById('history');
     const explosionAudio = document.getElementById('explosionAudio');
@@ -152,7 +148,7 @@
           if (isWin) {
             winAudio.play();
             balance += betAmount * currentCoefficient;
-            alert('Вы выиграли!');
+            alert(`Вы выиграли! Ваш выигрыш: ${betAmount * currentCoefficient}`);
           } else {
             explosionAudio.play();
             balance -= betAmount;
@@ -170,6 +166,12 @@
       historyElement.innerHTML = 'История последних игр: ' + gameHistory.join(', ');
     }
 
+    // Функция обновления предполагаемого выигрыша
+    function updatePredictedWin() {
+      const predictedWin = betAmount * currentCoefficient;
+      predictedWinText.textContent = `Предполагаемый выигрыш: ${predictedWin.toFixed(2)}`;
+    }
+
     startGameBtn.addEventListener('click', () => {
       betAmount = parseFloat(betAmountInput.value) || 0;
       if (betAmount <= 0) {
@@ -184,50 +186,14 @@
 
       balance -= betAmount;
       balanceText.textContent = `Баланс: ${balance}`;
+      updatePredictedWin();
       startGame();
     });
 
-    autoGameBtn.addEventListener('click', () => {
-      if (!isAutoPlaying) {
-        isAutoPlaying = true;
-        autoGameBtn.textContent = 'Остановить Автоигру';
-        gameInterval = setInterval(() => {
-          betAmount = parseFloat(betAmountInput.value) || 0;
-          if (betAmount > balance) {
-            alert('Недостаточно средств на балансе.');
-            clearInterval(gameInterval);
-            return;
-          }
-
-          if (betAmount > 0) {
-            balance -= betAmount;
-            balanceText.textContent = `Баланс: ${balance}`;
-            startGame();
-          } else {
-            alert('Пожалуйста, введите ставку.');
-          }
-        }, 10000);
-      } else {
-        isAutoPlaying = false;
-        autoGameBtn.textContent = 'Автоигра';
-        clearInterval(gameInterval);
-      }
-    });
-
-    adminPanelBtn.addEventListener('click', () => {
-      const adminPassword = prompt('Введите пароль для панели администратора:');
-      if (adminPassword === '1001') {
-        const addCoins = parseFloat(prompt('Введите количество монет для добавления:'));
-        if (!isNaN(addCoins)) {
-          balance += addCoins;
-          balanceText.textContent = `Баланс: ${balance}`;
-          alert('Монеты успешно добавлены!');
-        } else {
-          alert('Ошибка при добавлении монет.');
-        }
-      } else {
-        alert('Неверный пароль!');
-      }
+    // Обновление предполагаемого выигрыша при изменении ставки
+    betAmountInput.addEventListener('input', () => {
+      betAmount = parseFloat(betAmountInput.value) || 0;
+      updatePredictedWin();
     });
   </script>
 </body>
