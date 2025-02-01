@@ -65,7 +65,7 @@
     <h1>Crash Game</h1>
     <input type="number" id="betAmount" placeholder="Введите ставку">
     <button class="button" id="withdrawBtn">Вывести</button>
-    <p id="balance">Баланс: 1000.0</p>
+    <p id="balance">Баланс: 0.0</p>
     <p id="currentCoefficient">Коэффициент: 1.00x</p>
     <p id="predictedWin">Возможный выигрыш: 0.00</p>
     <div id="history" class="history">История последних игр:</div>
@@ -79,7 +79,7 @@
   </div>
 
   <script>
-    let balance = 1000;
+    let balance = 0; // Начальный баланс = 0 рублей
     let betAmount = 0;
     let currentCoefficient = 1.00;
     let gameHistory = [];
@@ -117,16 +117,22 @@
       balance -= activeBet;
       balanceText.textContent = `Баланс: ${roundToTenth(balance)} рублей`;
 
+      let speed = 100;
       let interval = setInterval(() => {
-        currentCoefficient += 0.01;
+        let increment = Math.min(0.01 + (currentCoefficient - 1) * 0.005, 1); 
+        currentCoefficient += increment;
         currentCoefficientText.textContent = `Коэффициент: ${currentCoefficient.toFixed(2)}x`;
         updatePredictedWin();
+
+        speed = Math.max(20, speed * 0.98);
+        clearInterval(interval);
+        interval = setInterval(arguments.callee, speed);
 
         if (currentCoefficient >= MAX_COEFFICIENT) {
           clearInterval(interval);
           endGame();
         }
-      }, 100);
+      }, speed);
 
       setTimeout(() => {
         clearInterval(interval);
