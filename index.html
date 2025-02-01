@@ -55,6 +55,16 @@
     .hidden {
       display: none;
     }
+    .balance {
+      font-size: 18px;
+      color: #f39c12;
+    }
+    .admin-panel {
+      background-color: #2980b9;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
@@ -62,7 +72,9 @@
     <h1>Crash Game</h1>
     <div id="gameInfo">
       <p>Current Coefficient: <span id="currentCoefficient">1.10</span></p>
-      <button id="startButton">Start Game</button>
+      <p>Balance: <span id="userBalance" class="balance">100</span> Coins</p>
+      <button id="startButton" class="hidden">Start Game</button>
+      <button id="betButton" class="hidden">Place Bet</button>
     </div>
 
     <h2>Game History (Last 10 Games)</h2>
@@ -82,21 +94,31 @@
         <button type="submit">Register</button>
       </form>
     </div>
+
+    <div class="admin-panel hidden">
+      <h2>Admin Panel</h2>
+      <button id="adminButton">Admin Access (Password Required)</button>
+    </div>
   </div>
 
   <script>
     let gameHistory = [];
     let currentCoefficient = 1.10;
     let gameInterval;
+    let userBalance = 100;
     const gameHistoryList = document.getElementById('gameHistoryList');
     const currentCoefficientElement = document.getElementById('currentCoefficient');
     const startButton = document.getElementById('startButton');
+    const betButton = document.getElementById('betButton');
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     const registerUsernameInput = document.getElementById('registerUsername');
     const registerPasswordInput = document.getElementById('registerPassword');
+    const userBalanceElement = document.getElementById('userBalance');
+    const adminPanel = document.querySelector('.admin-panel');
+    const adminButton = document.getElementById('adminButton');
     const adminPassword = '1001'; // Пароль администратора
 
     let users = {}; // База данных пользователей
@@ -168,11 +190,28 @@
       loginForm.classList.add('hidden');
       registerForm.classList.add('hidden');
       startButton.classList.remove('hidden');
+      betButton.classList.remove('hidden');
+      userBalanceElement.textContent = users[loggedInUser].balance;
       startAutoGames(); // Запуск игры при авторизации
     });
 
-    // Админ-панель
-    function adminPanel() {
+    // Функция для размещения ставки
+    betButton.addEventListener('click', () => {
+      if (users[loggedInUser].balance <= 0) {
+        alert('You don\'t have enough coins!');
+        return;
+      }
+
+      // Снимаем ставку с баланса
+      users[loggedInUser].balance -= 10;
+      userBalanceElement.textContent = users[loggedInUser].balance;
+
+      // Можно добавить логику выигрыша/проигрыша ставки
+      alert(`You placed a bet!`);
+    });
+
+    // Панель администратора
+    adminButton.addEventListener('click', () => {
       const password = prompt('Enter admin password');
       if (password === adminPassword) {
         const userToAddMoney = prompt('Enter username to add money');
@@ -187,10 +226,6 @@
       } else {
         alert('Invalid admin password!');
       }
-    }
-
-    startButton.addEventListener('click', () => {
-      startGame(); // Запуск игры по кнопке
     });
 
     // Запуск игры автоматически
