@@ -1,164 +1,212 @@
+// Весь код объединен: фронтенд + серверная часть + логика игры
+
+// Серверная часть на Express
+const express = require('express');
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const app = express();
+const port = 3000;
+
+let users = [
+    { username: 'admin', password: '1001', balance: 1000 }
+];
+
+// Настройка статичных файлов
+app.use(express.static('public'));
+app.use(bodyParser.json());
+
+// Обработка входа
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    const user = users.find(user => user.username === username && user.password === password);
+    
+    if (user) {
+        res.json({ success: true, balance: user.balance });
+    } else {
+        res.json({ success: false, message: 'Invalid credentials' });
+    }
+});
+
+// Старт сервера
+app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
+});
+
+// Фронтенд код (HTML + CSS + JS)
+const html = `
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crash Game</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #222;
-      color: white;
-      text-align: center;
-    }
-    #graph {
-      width: 100%;
-      height: 300px;
-      margin-top: 20px;
-    }
-    #game-container {
-      margin-top: 20px;
-    }
-    #results {
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #333;
-      border-radius: 10px;
-      width: 80%;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .result {
-      color: #ffcc00;
-    }
-    .game-row {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 5px;
-    }
-    .game-row span {
-      margin: 0 10px;
-    }
-    #crash-coefficient {
-      font-size: 2em;
-      margin-top: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crash Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: #fff;
+            text-align: center;
+        }
+
+        #game-container {
+            width: 80%;
+            margin: 0 auto;
+        }
+
+        #game-status {
+            margin: 20px 0;
+        }
+
+        #graph {
+            height: 300px;
+            width: 100%;
+            background-color: #444;
+        }
+
+        #controls {
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: #ff8800;
+            border: none;
+            color: white;
+            border-radius: 5px;
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        #results {
+            margin-top: 30px;
+        }
+
+        #login-section {
+            margin-top: 50px;
+            display: none;
+        }
+
+        input[type="text"], input[type="password"] {
+            padding: 10px;
+            margin: 5px;
+            width: 200px;
+        }
+    </style>
 </head>
 <body>
+    <div id="game-container">
+        <h1>Crash Game</h1>
+        <div id="game-status">
+            <p>Current multiplier: <span id="multiplier">1.00</span>x</p>
+        </div>
+        <div id="graph">
+            <!-- График будет отображаться здесь -->
+        </div>
+        <div id="controls">
+            <button id="start-btn">Start Game</button>
+            <button id="cashout-btn" disabled>Cashout</button>
+        </div>
+        <div id="results">
+            <h2>Last 10 Results</h2>
+            <ul id="result-list"></ul>
+        </div>
+        <div id="login-section">
+            <h2>Login</h2>
+            <form id="login-form">
+                <input type="text" id="username" placeholder="Username" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        let multiplier = 1.00;
+        let gameInterval;
+        let gameRunning = false;
+        let crashPoint = Math.random() * 2 + 1; // случайный момент краха
+        let username = null;
 
-  <h1>Crash Game</h1>
-  <div id="game-container">
-    <div id="crash-coefficient">Коэффициент: 1.00x</div>
-    <div id="graph"></div>
-    <button onclick="startGame()" style="margin-top: 20px; padding: 10px 20px;">Старт</button>
-  </div>
-  
-  <div id="results">
-    <h2>Последние 10 игр</h2>
-    <div id="game-results"></div>
-  </div>
+        const multiplierElement = document.getElementById("multiplier");
+        const startBtn = document.getElementById("start-btn");
+        const cashoutBtn = document.getElementById("cashout-btn");
+        const resultList = document.getElementById("result-list");
+        const loginForm = document.getElementById("login-form");
+        const loginSection = document.getElementById("login-section");
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    // Переменные игры
-    let currentCoefficient = 1.00;
-    let gameInterval;
-    let gameRunning = false;
-    let gameResults = [];
-    let lastUpdatedCoefficient = 1.00;
+        startBtn.addEventListener("click", startGame);
+        cashoutBtn.addEventListener("click", cashout);
 
-    const crashCoefficientElement = document.getElementById('crash-coefficient');
-    const gameResultsElement = document.getElementById('game-results');
-    
-    // Инициализация графика
-    const ctx = document.getElementById('graph').getContext('2d');
-    const graph = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Коэффициент',
-          borderColor: 'rgba(75, 192, 192, 1)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          data: [],
-          fill: true,
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          x: {
-            type: 'linear',
-            position: 'bottom',
-            ticks: {
-              stepSize: 1
+        loginForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const user = document.getElementById("username").value;
+            const pass = document.getElementById("password").value;
+            login(user, pass);
+        });
+
+        function startGame() {
+            if (gameRunning) return;
+
+            gameRunning = true;
+            crashPoint = Math.random() * 2 + 1; // случайный момент краха
+            multiplier = 1.00;
+            multiplierElement.textContent = multiplier.toFixed(2);
+
+            gameInterval = setInterval(() => {
+                if (multiplier >= crashPoint) {
+                    clearInterval(gameInterval);
+                    gameRunning = false;
+                    alert('Game crashed!');
+                } else {
+                    multiplier += 0.01; // увеличиваем коэффициент постепенно
+                    multiplierElement.textContent = multiplier.toFixed(2);
+                }
+            }, 100);
+
+            cashoutBtn.disabled = false;
+            startBtn.disabled = true;
+        }
+
+        function cashout() {
+            if (!gameRunning) return;
+
+            clearInterval(gameInterval);
+            gameRunning = false;
+            alert(\`You cashed out at \${multiplier.toFixed(2)}x\`);
+
+            const result = document.createElement("li");
+            result.textContent = \`\${username} cashed out at \${multiplier.toFixed(2)}x\`;
+            resultList.appendChild(result);
+
+            startBtn.disabled = false;
+            cashoutBtn.disabled = true;
+        }
+
+        function login(user, pass) {
+            // Логика для проверки данных пользователя (можно подключить к серверу)
+            if (user === "admin" && pass === "1001") {
+                alert("Admin login successful");
+                showAdminPanel();
+            } else if (user && pass) {
+                username = user;
+                alert("Login successful");
+                loginSection.style.display = 'none';
+                startBtn.disabled = false;
             }
-          }
-        }
-      }
-    });
-
-    // Запуск игры
-    function startGame() {
-      if (gameRunning) return;  // Если игра уже идет, ничего не делать
-
-      gameRunning = true;
-      currentCoefficient = 1.00;
-      crashCoefficientElement.textContent = 'Коэффициент: 1.00x';
-
-      // Начало игры: постепенно увеличиваем коэффициент
-      let timeElapsed = 0; // время в секундах
-
-      gameInterval = setInterval(() => {
-        timeElapsed += 0.1; // инкремент времени
-        currentCoefficient = 1 + (timeElapsed * 0.5); // увеличение коэффициента
-
-        // Анимация для отображения коэффициента
-        if (currentCoefficient >= lastUpdatedCoefficient + 0.01) {
-          lastUpdatedCoefficient += 0.01;
-          crashCoefficientElement.textContent = `Коэффициент: ${lastUpdatedCoefficient.toFixed(2)}x`;
         }
 
-        // Обновляем график
-        graph.data.labels.push(timeElapsed);
-        graph.data.datasets[0].data.push(currentCoefficient);
-        graph.update();
-
-        if (currentCoefficient >= 5) { // Пример завершения игры
-          endGame();
+        function showAdminPanel() {
+            // Реализовать панель администратора для добавления средств
+            alert("Admin panel is under development.");
         }
-      }, 100);
-    }
-
-    // Завершение игры
-    function endGame() {
-      clearInterval(gameInterval);
-      gameRunning = false;
-
-      // Сохраняем результат игры
-      const result = currentCoefficient.toFixed(2);
-      gameResults.push(result);
-      if (gameResults.length > 10) {
-        gameResults.shift();  // Убираем старые игры, оставляем только 10 последних
-      }
-
-      // Обновляем список результатов
-      updateGameResults();
-      
-      // Перезапуск игры
-      setTimeout(startGame, 3000);  // Старт через 3 секунды
-    }
-
-    // Обновление результатов
-    function updateGameResults() {
-      gameResultsElement.innerHTML = gameResults.map(result => `<div class="game-row"><span class="result">${result}x</span></div>`).join('');
-    }
-
-    // Автозапуск игры
-    window.onload = startGame;
-  </script>
-
+    </script>
 </body>
 </html>
+`;
+
+fs.writeFileSync('public/index.html', html);
