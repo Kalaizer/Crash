@@ -100,7 +100,6 @@
       <input type="number" id="betAmount" class="input-field" placeholder="Введите ставку" />
     </div>
     <div>
-      <button class="button" id="startGameBtn">Старт</button>
       <button class="button" id="withdrawBtn">Вывести</button>
     </div>
     <div id="balance">Баланс: 1000.0</div>
@@ -116,27 +115,22 @@
     <button class="admin-button" id="adminAddMoney">Добавить деньги</button>
   </div>
 
-  <audio id="explosionAudio" src="explosion.mp3" preload="auto"></audio>
-  <audio id="winAudio" src="win.mp3" preload="auto"></audio>
-
   <script>
     let balance = 1000;
     let betAmount = 0;
     let currentCoefficient = 1;
     let gameHistory = [];
     let gameInterval;
-    let activeBet = null;  // Ставка, сделанная пользователем на текущую игру
+    let activeBet = null;  
+    let gameInProgress = false;  
     const MAX_COEFFICIENT = 1000;
-    const ADMIN_PASSWORD = '1001';  // Пароль для админ-панели
+    const ADMIN_PASSWORD = '1001';  
 
-    const startGameBtn = document.getElementById('startGameBtn');
     const betAmountInput = document.getElementById('betAmount');
     const balanceText = document.getElementById('balance');
     const currentCoefficientText = document.getElementById('currentCoefficient');
     const predictedWinText = document.getElementById('predictedWin');
     const historyElement = document.getElementById('history');
-    const explosionAudio = document.getElementById('explosionAudio');
-    const winAudio = document.getElementById('winAudio');
     const withdrawBtn = document.getElementById('withdrawBtn');
     const adminPasswordInput = document.getElementById('adminPassword');
     const adminAmountInput = document.getElementById('adminAmount');
@@ -147,82 +141,64 @@
     }
 
     function startGame() {
+      if (gameInProgress) return;  
+      gameInProgress = true;
+      
       currentCoefficient = 1;
-      activeBet = betAmount;  // Сохраняем текущую ставку
+      activeBet = parseFloat(betAmountInput.value) || 0;  
+
+      if (activeBet > balance) {
+        alert('У вас недостаточно средств для этой ставки!');
+        gameInProgress = false;
+        return;
+      }
+
+      balance -= activeBet;
+      balanceText.textContent = `Баланс: ${roundToTenth(balance)} рублей`;
 
       let interval = setInterval(() => {
         currentCoefficient += 0.05;
-
-        // Ограничение максимального коэффициента
-        if (currentCoefficient >= MAX_COEFFICIENT) {
-          currentCoefficient = MAX_COEFFICIENT;
-          clearInterval(interval);  // останавливаем игру, когда коэффициент достигает максимума
-        }
-
         currentCoefficientText.textContent = `Коэффициент: ${roundToTenth(currentCoefficient)}x`;
 
-        // Проверка, если коэффициент достиг нужного значения
-        if (currentCoefficient >= 2) {
-          winAudio.play();
-          historyElement.innerHTML += `<p>Игра завершена: ${roundToTenth(currentCoefficient)}x - Победа!</p>`;
+        if (currentCoefficient >= MAX_COEFFICIENT) {
+          clearInterval(interval);
+          endGame();
         }
+      }, 100);
 
-      }, 100); // Каждые 0.1 секунда коэффициент увеличивается
-
-      // Обновление коэффициента
-      currentCoefficientText.textContent = `Коэффициент: ${roundToTenth(currentCoefficient)}x`;
-
-      // Обновление истории игр
-      gameHistory.push(currentCoefficient);
-      if (gameHistory.length > 10) {
-        gameHistory.shift();  // Оставляем только последние 10 игр
-      }
+      setTimeout(() => {
+        clearInterval(interval);
+        endGame();
+      }, Math.random() * 5000 + 5000);  
     }
 
-    // Запуск игры автоматически каждую секунду, даже если ставка не сделана
-    setInterval(function() {
-      if (activeBet === null) {
-        betAmount = parseFloat(betAmountInput.value);
+    function endGame() {
+      gameInProgress = false;
+      let finalCoefficient = roundToTenth(currentCoefficient);
+      
+      gameHistory.unshift(finalCoefficient);
+      if (gameHistory.length > 10) {
+        gameHistory.pop();
       }
 
-      if (betAmount > 0) {
-        if (betAmount > balance) {
-          alert('У вас недостаточно средств для этой ставки!');
-          return;
-        }
-        startGame();
-      } else {
-        startGame();  // Игры все равно будут запускаться, даже если ставка не сделана
-      }
-    }, 5000);  // Игра начинается каждые 5 секунд
+      historyElement.innerHTML = `История последних игр: <br>` + gameHistory.map(c => `<p>${c}x</p>`).join('');
+    }
 
-    startGameBtn.addEventListener('click', function() {
-      betAmount = parseFloat(betAmountInput.value);
-      if (isNaN(betAmount) || betAmount <= 0) {
-        alert('Введите правильную сумму ставки!');
-        return;
-      }
-      if (betAmount > balance) {
-        alert('У вас недостаточно средств для этой ставки!');
-        return;
-      }
-      startGame();
-    });
+    setInterval(startGame, 5000);
 
     withdrawBtn.addEventListener('click', function() {
-      const predictedWin = roundToTenth(currentCoefficient * betAmount);
-
-      if (betAmount <= 0) {
-        alert('Сделайте ставку, чтобы вывести средства!');
+      if (!gameInProgress || !activeBet) {
+        alert('Нет активной игры или ставки для вывода!');
         return;
       }
 
+      const predictedWin = roundToTenth(currentCoefficient * activeBet);
       balance += predictedWin;
       balanceText.textContent = `Баланс: ${roundToTenth(balance)} рублей`;
-      predictedWinText.textContent = `Предполагаемый выигрыш: 0.00`;  // сбрасываем возможный выигрыш
+      activeBet = null;
+      predictedWinText.textContent = `Предполагаемый выигрыш: 0.00`;
 
       alert(`Вы вывели ${predictedWin} рублей!`);
-      activeBet = null;
     });
 
     betAmountInput.addEventListener('input', function() {
