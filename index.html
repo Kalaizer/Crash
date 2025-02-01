@@ -100,6 +100,7 @@
     </div>
     <div>
       <button class="button" id="startGameBtn">Старт</button>
+      <button class="button" id="adminPanelBtn">Панель Админа</button>
     </div>
     <div id="balance">Баланс: 1000</div>
     <div id="currentCoefficient">Коэффициент: 1.00x</div>
@@ -118,6 +119,7 @@
     let betAmount = 0;
     let currentCoefficient = 1;
     let gameHistory = [];
+    let gameInterval;
 
     const startGameBtn = document.getElementById('startGameBtn');
     const betAmountInput = document.getElementById('betAmount');
@@ -128,6 +130,7 @@
     const historyElement = document.getElementById('history');
     const explosionAudio = document.getElementById('explosionAudio');
     const winAudio = document.getElementById('winAudio');
+    const adminPanelBtn = document.getElementById('adminPanelBtn');
 
     function updateGraph() {
       const scale = currentCoefficient;
@@ -137,8 +140,9 @@
     function startGame() {
       currentCoefficient = 1;
       updateGraph();
+
       let interval = setInterval(() => {
-        currentCoefficient += 0.1;
+        currentCoefficient += 0.01; // Коэффициент увеличивается плавно
         updateGraph();
         currentCoefficientText.textContent = `Коэффициент: ${currentCoefficient.toFixed(2)}x`;
 
@@ -194,6 +198,22 @@
     betAmountInput.addEventListener('input', () => {
       betAmount = parseFloat(betAmountInput.value) || 0;
       updatePredictedWin();
+    });
+
+    adminPanelBtn.addEventListener('click', () => {
+      const adminPassword = prompt('Введите пароль для панели администратора:');
+      if (adminPassword === '1001') {
+        const addCoins = parseFloat(prompt('Введите количество монет для добавления:'));
+        if (!isNaN(addCoins)) {
+          balance += addCoins;
+          balanceText.textContent = `Баланс: ${balance}`;
+          alert('Монеты успешно добавлены!');
+        } else {
+          alert('Ошибка при добавлении монет.');
+        }
+      } else {
+        alert('Неверный пароль!');
+      }
     });
   </script>
 </body>
