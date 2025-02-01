@@ -52,6 +52,13 @@
             font-size: 12px;
             color: #FFA500;
         }
+
+        canvas {
+            display: block;
+            margin: 20px auto;
+            background: #333;
+            border: 1px solid #FFA500;
+        }
     </style>
 </head>
 <body>
@@ -76,11 +83,46 @@
             <p>Текущий коэффициент: <span id="currentMultiplier">1.00x</span></p>
             <button id="cashOut" disabled>Забрать выигрыш</button>
         </div>
+        <canvas id="crashGraph" width="400" height="200"></canvas>
     </div>
 
     <script>
         // JavaScript
         let userId = null;
+        let gameInterval = null;
+        const graphCanvas = document.getElementById('crashGraph');
+        const ctx = graphCanvas.getContext('2d');
+
+        // Обновление баланса
+        function updateBalance(newBalance) {
+            document.getElementById('userBalance').textContent = newBalance.toFixed(2);
+        }
+
+        // Очистка графика
+        function clearGraph() {
+            ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+        }
+
+        // Отрисовка графика
+        function drawGraph(multiplier, step) {
+            clearGraph();
+
+            const x = step * 2; // Шаг по оси X
+            const y = graphCanvas.height - (multiplier * 10); // Высота линии
+
+            ctx.strokeStyle = '#FFA500'; // Оранжевая линия
+            ctx.lineWidth = 2;
+
+            if (step === 0) {
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+
+            ctx.stroke();
+        }
 
         // Регистрация пользователя
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
@@ -114,13 +156,74 @@
             const data = await response.json();
 
             if (data.balance !== undefined) {
-                document.getElementById('userBalance').textContent = data.balance.toFixed(2);
+                updateBalance(data.balance);
             }
         }
 
         // Начало игры
         document.getElementById('startGame').addEventListener('click', () => {
-            alert('Игра начинается!');
+            const betAmount = parseFloat(document.getElementById('betAmount').value);
+            const currentBalance = parseFloat(document.getElementById('userBalance').textContent);
+
+            if (isNaN(betAmount) || betAmount <= 0 || betAmount > currentBalance * 10) {
+                alert("Неверная ставка!");
+                return;
+            }
+
+            // Обновляем баланс после ставки
+            const newBalance = currentBalance - (betAmount / 10);
+            updateBalance(newBalance);
+
+            // Сохраняем новый баланс на сервере
+            fetch(`https://your-replit-api-url/admin/set-balance`, { // Замените URL на ваш Replit API
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, newBalance: newBalance * 10 })
+            });
+
+            let currentMultiplier = 1.00;
+            let step = 0;
+
+            document.getElementById('currentMultiplier').textContent = `${currentMultiplier.toFixed(2)}x`;
+            document.getElementById('cashOut').disabled = false;
+
+            gameInterval = setInterval(() => {
+                step++;
+                currentMultiplier += Math.random() * 0.1;
+                document.getElementById('currentMultiplier').textContent = `${currentMultiplier.toFixed(2)}x`;
+
+                drawGraph(currentMultiplier, step);
+
+                if (Math.random() < 0.05) { // Вероятность падения
+                    clearInterval(gameInterval);
+                    alert(`Игра завершилась! Коэффициент: ${currentMultiplier.toFixed(2)}x`);
+                    document.getElementById('cashOut').disabled = true;
+                }
+            }, 100);
+        });
+
+        // Забрать выигрыш
+        document.getElementById('cashOut').addEventListener('click', () => {
+            clearInterval(gameInterval);
+
+            const betAmount = parseFloat(document.getElementById('betAmount').value);
+            const currentMultiplier = parseFloat(document.getElementById('currentMultiplier').textContent.replace('x', ''));
+            const winnings = betAmount * currentMultiplier;
+
+            const currentBalance = parseFloat(document.getElementById('userBalance').textContent);
+            const newBalance = currentBalance + (winnings / 10);
+
+            updateBalance(newBalance);
+
+            // Сохраняем новый баланс на сервере
+            fetch(`https://your-replit-api-url/admin/set-balance`, { // Замените URL на ваш Replit API
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, newBalance: newBalance * 10 })
+            });
+
+            document.getElementById('cashOut').disabled = true;
+            clearGraph();
         });
     </script>
 </body>
