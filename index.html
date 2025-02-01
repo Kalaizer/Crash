@@ -139,8 +139,9 @@
     const adminPanelBtn = document.getElementById('adminPanelBtn');
 
     function updateGraph() {
-      const scale = currentCoefficient / 1000;  // нормализуем коэффициент
-      graphElement.style.transform = `scaleY(${scale})`;
+      const scale = currentCoefficient / 1000;  // нормализуем коэффициент, чтобы он подходил для графика
+      graphElement.style.height = `${scale * 100}%`;
+      graphElement.style.transition = "height 0.1s ease-in-out";
     }
 
     function startGame() {
@@ -182,7 +183,7 @@
             alert('Вы проиграли!');
           }
 
-          gameHistory.unshift(`Коэффициент: ${currentCoefficient.toFixed(2)}x`);
+          gameHistory.unshift(`${currentCoefficient.toFixed(2)}x`);
           if (gameHistory.length > 10) gameHistory.pop();
           updateHistory();
         }
@@ -212,4 +213,19 @@
       }
 
       balance -= betAmount;
-      balanceText.textContent
+      balanceText.textContent = `Баланс: ${balance.toFixed(2)}`;
+      startGame();
+    });
+
+    withdrawBtn.addEventListener('click', () => {
+      if (!activeBet) {
+        alert('Сначала сделайте ставку.');
+        return;
+      }
+
+      const predictedWin = betAmount * currentCoefficient;
+      alert(`Вы можете вывести ${predictedWin.toFixed(2)}. Если хотите вывести средства, нажмите "Вывести".`);
+    });
+  </script>
+</body>
+</html>
