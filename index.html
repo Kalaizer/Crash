@@ -66,37 +66,6 @@
       border-radius: 5px;
     }
 
-    .graph-container {
-      margin-top: 20px;
-      width: 100%;
-      height: 200px;
-      background-color: #000;
-      border-radius: 10px;
-      border: 1px solid #ff6f00;
-      position: relative;
-    }
-
-    .graph {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background-color: #fff;
-      transform-origin: bottom left;
-      transition: transform 0.1s linear;
-    }
-
-    .graph-labels {
-      position: absolute;
-      left: 0;
-      bottom: -25px;
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      color: #fff;
-    }
-
     .admin-panel {
       margin-top: 20px;
       background-color: #333;
@@ -121,6 +90,7 @@
       border-radius: 5px;
       margin-top: 10px;
     }
+
   </style>
 </head>
 <body>
@@ -136,10 +106,6 @@
     <div id="balance">Баланс: 1000.0</div>
     <div id="currentCoefficient">Коэффициент: 1.00x</div>
     <div id="predictedWin">Предполагаемый выигрыш: 0.00</div>
-    <div class="graph-container">
-      <div class="graph" id="graph"></div>
-      <div class="graph-labels" id="graphLabels"></div>
-    </div>
     <div id="history" class="history">История последних игр:</div>
   </div>
 
@@ -159,9 +125,8 @@
     let currentCoefficient = 1;
     let gameHistory = [];
     let gameInterval;
-    let timeElapsed = 0;  // время, прошедшее с начала игры
-    const MAX_COEFFICIENT = 1000;
     let activeBet = null;  // Ставка, сделанная пользователем на текущую игру
+    const MAX_COEFFICIENT = 1000;
     const ADMIN_PASSWORD = '1001';  // Пароль для админ-панели
 
     const startGameBtn = document.getElementById('startGameBtn');
@@ -169,12 +134,10 @@
     const balanceText = document.getElementById('balance');
     const currentCoefficientText = document.getElementById('currentCoefficient');
     const predictedWinText = document.getElementById('predictedWin');
-    const graphElement = document.getElementById('graph');
     const historyElement = document.getElementById('history');
     const explosionAudio = document.getElementById('explosionAudio');
     const winAudio = document.getElementById('winAudio');
     const withdrawBtn = document.getElementById('withdrawBtn');
-    const graphLabels = document.getElementById('graphLabels');
     const adminPasswordInput = document.getElementById('adminPassword');
     const adminAmountInput = document.getElementById('adminAmount');
     const adminAddMoneyBtn = document.getElementById('adminAddMoney');
@@ -183,40 +146,11 @@
       return Math.round(num * 10) / 10;
     }
 
-    function updateGraph() {
-      // График должен начинаться с нуля
-      const graphHeight = Math.min(currentCoefficient, MAX_COEFFICIENT);
-      graphElement.style.height = `${graphHeight}%`;
-      graphElement.style.transition = "height 0.1s ease-in-out";
-      
-      // Обновление пометок на графике
-      updateGraphLabels();
-    }
-
-    function updateGraphLabels() {
-      graphLabels.innerHTML = '';
-      const labelStep = Math.floor(MAX_COEFFICIENT / 5);  // Разделим график на 5 меток
-      for (let i = 0; i <= 5; i++) {
-        const labelValue = i * labelStep;
-        const label = document.createElement('div');
-        label.textContent = `${labelValue}x`;
-        label.style.width = `${100 / 5}%`;  // Разделим на 5 частей
-        label.style.textAlign = 'center';
-        label.style.color = '#fff';
-        graphLabels.appendChild(label);
-      }
-    }
-
     function startGame() {
       currentCoefficient = 1;
-      timeElapsed = 0;  // сброс времени
       activeBet = betAmount;  // Сохраняем текущую ставку
-      updateGraph();
 
       let interval = setInterval(() => {
-        timeElapsed++;
-
-        // Увеличение коэффициента с постоянным темпом
         currentCoefficient += 0.05;
 
         // Ограничение максимального коэффициента
@@ -225,7 +159,6 @@
           clearInterval(interval);  // останавливаем игру, когда коэффициент достигает максимума
         }
 
-        updateGraph();
         currentCoefficientText.textContent = `Коэффициент: ${roundToTenth(currentCoefficient)}x`;
 
         // Проверка, если коэффициент достиг нужного значения
@@ -236,9 +169,32 @@
 
       }, 100); // Каждые 0.1 секунда коэффициент увеличивается
 
-      // Обновление графика и коэффициента каждые 0.1 секунды
-      updateGraph();
+      // Обновление коэффициента
+      currentCoefficientText.textContent = `Коэффициент: ${roundToTenth(currentCoefficient)}x`;
+
+      // Обновление истории игр
+      gameHistory.push(currentCoefficient);
+      if (gameHistory.length > 10) {
+        gameHistory.shift();  // Оставляем только последние 10 игр
+      }
     }
+
+    // Запуск игры автоматически каждую секунду, даже если ставка не сделана
+    setInterval(function() {
+      if (activeBet === null) {
+        betAmount = parseFloat(betAmountInput.value);
+      }
+
+      if (betAmount > 0) {
+        if (betAmount > balance) {
+          alert('У вас недостаточно средств для этой ставки!');
+          return;
+        }
+        startGame();
+      } else {
+        startGame();  // Игры все равно будут запускаться, даже если ставка не сделана
+      }
+    }, 5000);  // Игра начинается каждые 5 секунд
 
     startGameBtn.addEventListener('click', function() {
       betAmount = parseFloat(betAmountInput.value);
@@ -254,16 +210,24 @@
     });
 
     withdrawBtn.addEventListener('click', function() {
-      if (activeBet !== null) {
-        alert('Вы не можете вывести средства, пока не завершится игра.');
+      const predictedWin = roundToTenth(currentCoefficient * betAmount);
+
+      if (betAmount <= 0) {
+        alert('Сделайте ставку, чтобы вывести средства!');
         return;
       }
 
-      const predictedWin = roundToTenth(currentCoefficient * betAmount);
       balance += predictedWin;
       balanceText.textContent = `Баланс: ${roundToTenth(balance)} рублей`;
+      predictedWinText.textContent = `Предполагаемый выигрыш: 0.00`;  // сбрасываем возможный выигрыш
+
       alert(`Вы вывели ${predictedWin} рублей!`);
       activeBet = null;
+    });
+
+    betAmountInput.addEventListener('input', function() {
+      const predictedWin = roundToTenth(currentCoefficient * parseFloat(betAmountInput.value));
+      predictedWinText.textContent = `Предполагаемый выигрыш: ${predictedWin}`;
     });
 
     adminAddMoneyBtn.addEventListener('click', function() {
