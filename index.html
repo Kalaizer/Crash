@@ -6,242 +6,173 @@
   <title>Crash Game</title>
   <style>
     body {
+      background-color: black;
+      color: white;
       font-family: Arial, sans-serif;
-      background-color: #2c3e50;
-      color: #ecf0f1;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       height: 100vh;
       margin: 0;
-      flex-direction: column;
+      transition: all 0.3s ease-in-out;
     }
-    .container {
+    h1 {
+      color: #ff7f00; /* Оранжевый */
+      font-size: 3em;
       text-align: center;
-      width: 100%;
-      max-width: 600px;
     }
-    #gameInfo {
-      margin: 20px;
+    .game-container {
+      background-color: #222;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      width: 300px;
+      text-align: center;
     }
-    button {
-      padding: 10px 20px;
-      background-color: #e74c3c;
+    .button {
+      background-color: #ff7f00;
       border: none;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #c0392b;
-    }
-    #gameHistoryList {
-      list-style-type: none;
-      padding: 0;
-    }
-    #gameHistoryList li {
-      background-color: #34495e;
-      margin: 5px 0;
       padding: 10px;
-    }
-    #userAuth {
-      margin-top: 20px;
-    }
-    input {
-      padding: 8px;
-      margin: 5px;
-      width: 200px;
-      border: 1px solid #ccc;
-    }
-    .hidden {
-      display: none;
-    }
-    .balance {
-      font-size: 18px;
-      color: #f39c12;
-    }
-    .admin-panel {
-      background-color: #2980b9;
-      padding: 15px;
-      margin-top: 20px;
+      font-size: 1.2em;
+      margin: 10px;
+      cursor: pointer;
       border-radius: 5px;
+      transition: transform 0.3s;
     }
-    #graphCanvas {
+    .button:hover {
+      transform: scale(1.1);
+    }
+    .button:active {
+      background-color: #e66c00;
+    }
+    .input-field {
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 1.2em;
+      border-radius: 5px;
+      border: none;
+    }
+    .graph-container {
       width: 100%;
-      height: 300px;
-      background-color: #34495e;
+      height: 200px;
       margin-top: 20px;
+      background-color: black;
+      border-radius: 10px;
+      border: 1px solid #ff7f00;
+      position: relative;
+    }
+    .graph {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #ff7f00;
+      transform-origin: bottom left;
+      transition: transform 0.1s linear;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Crash Game</h1>
-    <div id="gameInfo">
-      <p>Current Coefficient: <span id="currentCoefficient">1.10</span></p>
-      <p>Balance: <span id="userBalance" class="balance">100</span> Coins</p>
-      <button id="startButton" class="hidden">Start Game</button>
-      <button id="betButton" class="hidden">Place Bet</button>
-      <div id="betAmountSection" class="hidden">
-        <input type="number" id="betAmount" placeholder="Enter bet amount" min="1" required>
-      </div>
+  <h1>Crash Game</h1>
+  <div class="game-container">
+    <div>
+      <input type="number" class="input-field" id="betAmount" placeholder="Введите ставку" />
     </div>
-
-    <h2>Game History (Last 10 Games)</h2>
-    <ul id="gameHistoryList"></ul>
-
-    <canvas id="graphCanvas"></canvas>
-
-    <div id="userAuth">
-      <h2>User Login</h2>
-      <form id="loginForm">
-        <input type="text" id="username" placeholder="Username" required>
-        <input type="password" id="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-      </form>
-      <h2>Register User</h2>
-      <form id="registerForm">
-        <input type="text" id="registerUsername" placeholder="Username" required>
-        <input type="password" id="registerPassword" placeholder="Password" required>
-        <button type="submit">Register</button>
-      </form>
+    <div>
+      <button class="button" id="startGameBtn">Старт</button>
+      <button class="button" id="autoGameBtn">Автоигра</button>
     </div>
-
-    <div class="admin-panel hidden">
-      <h2>Admin Panel</h2>
-      <button id="adminButton">Admin Access (Password Required)</button>
-      <div id="adminForm" class="hidden">
-        <input type="number" id="adminAmount" placeholder="Amount to add">
-        <button id="addBalanceButton">Add Balance</button>
-      </div>
+    <div id="currentCoefficient">Коэффициент: 1.00x</div>
+    <div class="graph-container">
+      <div class="graph" id="graph"></div>
     </div>
+    <div id="history">История последних игр:</div>
   </div>
 
+  <audio id="explosionAudio" src="explosion.mp3" preload="auto"></audio>
+  <audio id="winAudio" src="win.mp3" preload="auto"></audio>
+
   <script>
-    let gameHistory = [];
-    let currentCoefficient = 1.10;
-    let userBalance = 100;
+    let betAmount = 0;
     let gameInterval;
-    const gameHistoryList = document.getElementById('gameHistoryList');
-    const currentCoefficientElement = document.getElementById('currentCoefficient');
-    const startButton = document.getElementById('startButton');
-    const betButton = document.getElementById('betButton');
-    const betAmountSection = document.getElementById('betAmountSection');
+    let isAutoPlaying = false;
+
+    const startGameBtn = document.getElementById('startGameBtn');
+    const autoGameBtn = document.getElementById('autoGameBtn');
     const betAmountInput = document.getElementById('betAmount');
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const registerUsernameInput = document.getElementById('registerUsername');
-    const registerPasswordInput = document.getElementById('registerPassword');
-    const userBalanceElement = document.getElementById('userBalance');
-    const adminPanel = document.querySelector('.admin-panel');
-    const adminButton = document.getElementById('adminButton');
-    const adminPassword = '1001'; // Пароль администратора
-    const adminForm = document.getElementById('adminForm');
-    const adminAmountInput = document.getElementById('adminAmount');
-    const addBalanceButton = document.getElementById('addBalanceButton');
-    const graphCanvas = document.getElementById('graphCanvas');
-    const ctx = graphCanvas.getContext('2d');
+    const currentCoefficientText = document.getElementById('currentCoefficient');
+    const graphElement = document.getElementById('graph');
+    const historyElement = document.getElementById('history');
+    const explosionAudio = document.getElementById('explosionAudio');
+    const winAudio = document.getElementById('winAudio');
 
-    let users = {}; // База данных пользователей
-    let loggedInUser = null; // Текущий вошедший пользователь
-    let graphData = []; // Данные для графика
+    let currentCoefficient = 1;
+    let gameHistory = [];
 
-    // Функция для обновления истории игр
-    function updateGameHistory() {
-      gameHistoryList.innerHTML = '';
-      gameHistory.forEach(game => {
-        const li = document.createElement('li');
-        li.textContent = `Game: ${game.coefficient}x - ${new Date(game.timestamp).toLocaleTimeString()}`;
-        gameHistoryList.appendChild(li);
-      });
-    }
-
-    // Функция для отображения графика
     function updateGraph() {
-      const maxGames = 20; // Ограничение по количеству игр на графике
-      graphData.push(currentCoefficient);
-
-      if (graphData.length > maxGames) {
-        graphData.shift(); // Убираем старые данные, чтобы не заполнять память
-      }
-
-      ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
-
-      // Рисуем график
-      ctx.beginPath();
-      graphData.forEach((value, index) => {
-        const x = (graphCanvas.width / maxGames) * index;
-        const y = graphCanvas.height - (value * graphCanvas.height) / 5; // Сжимаем коэффициент
-        if (index === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-      });
-      ctx.strokeStyle = '#ecf0f1';
-      ctx.stroke();
+      const scale = currentCoefficient;
+      graphElement.style.transform = `scaleY(${scale})`;
     }
 
-    // Функция для увеличения коэффициента
-    function increaseCoefficient() {
-      currentCoefficient = (currentCoefficient * (Math.random() * (1.5 - 1) + 1)).toFixed(2);
-      currentCoefficientElement.textContent = currentCoefficient;
-      updateGraph(); // Обновляем график
-    }
-
-    // Функция для начала игры
     function startGame() {
-      increaseCoefficient();
+      currentCoefficient = 1;
+      updateGraph();
+      let interval = setInterval(() => {
+        currentCoefficient += 0.1; // Увеличиваем коэффициент
+        updateGraph();
+        currentCoefficientText.textContent = `Коэффициент: ${currentCoefficient.toFixed(2)}x`;
 
-      // Добавляем в историю
-      gameHistory.push({ coefficient: currentCoefficient, timestamp: new Date() });
+        if (Math.random() < 0.1) {
+          clearInterval(interval);
+          const isWin = Math.random() < 0.5;
+          if (isWin) {
+            winAudio.play();
+            alert('Вы выиграли!');
+          } else {
+            explosionAudio.play();
+            alert('Вы проиграли!');
+          }
 
-      if (gameHistory.length > 10) {
-        gameHistory.shift(); // Убираем старые игры
-      }
-
-      updateGameHistory();
+          // Добавление в историю
+          gameHistory.unshift(`Коэффициент: ${currentCoefficient.toFixed(2)}x`);
+          if (gameHistory.length > 10) gameHistory.pop();
+          updateHistory();
+        }
+      }, 1000);
     }
 
-    // Функция для автоматического старта игры каждые 10 секунд
-    function startAutoGames() {
-      setInterval(() => {
+    function updateHistory() {
+      historyElement.innerHTML = 'История последних игр: ' + gameHistory.join(', ');
+    }
+
+    startGameBtn.addEventListener('click', () => {
+      betAmount = parseFloat(betAmountInput.value) || 0;
+      if (betAmount > 0) {
         startGame();
-      }, 10000); // Каждые 10 секунд
-    }
-
-    // Функция для регистрации пользователя
-    registerForm.addEventListener('submit', event => {
-      event.preventDefault();
-      const username = registerUsernameInput.value;
-      const password = registerPasswordInput.value;
-
-      if (users[username]) {
-        alert('User already exists!');
-        return;
+      } else {
+        alert('Пожалуйста, введите ставку.');
       }
-
-      users[username] = { password, balance: 100 };
-      alert('User registered successfully!');
-      registerForm.reset();
     });
 
-    // Функция для авторизации пользователя
-    loginForm.addEventListener('submit', event => {
-      event.preventDefault();
-      const username = usernameInput.value;
-      const password = passwordInput.value;
-
-      if (!users[username] || users[username].password !== password) {
-        alert('Invalid username or password');
-        return;
+    autoGameBtn.addEventListener('click', () => {
+      if (!isAutoPlaying) {
+        isAutoPlaying = true;
+        autoGameBtn.textContent = 'Остановить Автоигру';
+        gameInterval = setInterval(() => {
+          betAmount = parseFloat(betAmountInput.value) || 0;
+          if (betAmount > 0) {
+            startGame();
+          } else {
+            alert('Пожалуйста, введите ставку.');
+          }
+        }, 10000);
+      } else {
+        isAutoPlaying = false;
+        autoGameBtn.textContent = 'Автоигра';
+        clearInterval(gameInterval);
       }
-
-      loggedInUser = username;
-      alert('Login successful!');
-      loginForm.classList.add('hidden');
-      registerForm.classList.add('hidden');
-      startButton.classList.remove('hidden');
-      betButton.classList
+    });
+  </script>
+</body>
+</html>
