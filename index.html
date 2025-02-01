@@ -7,328 +7,164 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #1d1d1d;
+            color: white;
             text-align: center;
-            background-color: #222;
-            color: #FFA500;
-            padding: 20px;
         }
-
-        .container {
-            max-width: 400px;
-            margin: auto;
-            background: #333;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(255, 165, 0, 0.5);
+        #container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
         }
-
-        button {
-            padding: 10px 20px;
-            margin: 5px;
+        #balance {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+        .button {
+            background-color: #ff6f00;
+            color: white;
             border: none;
-            border-radius: 5px;
+            padding: 10px 20px;
+            font-size: 1em;
             cursor: pointer;
         }
-
-        button:disabled {
-            background-color: #666;
+        .button:hover {
+            background-color: #ff9f00;
         }
-
-        input {
-            padding: 5px;
+        #gameArea {
+            margin-top: 20px;
+            position: relative;
+            height: 300px;
+            background-color: black;
+            border: 2px solid #ff6f00;
+        }
+        #crashLine {
+            position: absolute;
+            bottom: 10px;
             width: 100%;
-            margin-bottom: 10px;
-            background: #444;
-            color: #FFA500;
-            border: 1px solid #FFA500;
+            height: 5px;
+            background-color: red;
         }
-
-        small {
-            display: block;
-            margin-top: 10px;
-            font-size: 12px;
-            color: #FFA500;
+        #betAmount {
+            font-size: 1.2em;
+            margin-bottom: 20px;
         }
-
-        canvas {
-            display: block;
-            margin: 20px auto;
-            background: #333;
-            border: 1px solid #FFA500;
-        }
-
-        #lastMultipliers {
+        #log {
+            font-size: 0.9em;
             margin-top: 20px;
-            font-size: 14px;
-        }
-
-        #adminPanel {
-            margin-top: 20px;
-            font-size: 14px;
-        }
-
-        #adminPanel button {
-            background-color: #FF4500;
-            color: white;
+            background-color: #333;
+            padding: 10px;
+            height: 200px;
+            overflow-y: scroll;
+            border: 1px solid #ff6f00;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Игра Crash</h1>
+    <div id="container">
+        <h1>Crash Game</h1>
+        <div id="balance">Баланс: 50000 монет</div>
+        <input type="number" id="betAmountInput" placeholder="Ставка (в монетах)" />
+        <button class="button" id="startButton">Начать игру</button>
+        <button class="button" id="withdrawButton" style="display: none;">Вывести</button>
 
-        <!-- Регистрация -->
-        <form id="registerForm">
-            <input type="text" id="username" placeholder="Username" required>
-            <input type="password" id="password" placeholder="Password" required>
-            <button type="submit">Зарегистрироваться</button>
-        </form>
-
-        <!-- Баланс и игра -->
-        <div class="balance">
-            <span>Баланс: <span id="userBalance">0</span> ₽</span>
-            <small>10 коинов = 1 ₽</small>
-        </div>
-        <div class="game">
-            <input type="number" id="betAmount" placeholder="Введите ставку (в коинах)">
-            <button id="cashOut" disabled>Забрать выигрыш</button>
-            <p>Текущий коэффициент: <span id="currentMultiplier">1.00x</span></p>
-            <canvas id="crashGraph" width="400" height="200"></canvas>
+        <div id="gameArea">
+            <div id="crashLine"></div>
         </div>
 
-        <!-- Таймер обратного отсчета -->
-        <div id="countdownTimer">До начала следующей игры: <span id="timer">5</span> сек.</div>
-
-        <!-- Последние 10 коэффициентов -->
-        <div id="lastMultipliers">
-            <h3>Последние 10 коэффициентов:</h3>
-            <ul id="multipliersList"></ul>
-        </div>
-
-        <!-- Панель администратора -->
-        <div id="adminPanel">
-            <button id="openAdminPanel">Панель админа</button>
-            <div id="adminControls" style="display: none;">
-                <input type="password" id="adminPassword" placeholder="Введите пароль админа">
-                <input type="number" id="newBalance" placeholder="Новый баланс (в рублях)">
-                <button id="setBalance">Изменить баланс</button>
-            </div>
-        </div>
+        <div id="log"></div>
     </div>
 
     <script>
-        let userId = null;
-        let isAdminPanelOpen = false;
+        const startButton = document.getElementById('startButton');
+        const withdrawButton = document.getElementById('withdrawButton');
+        const balanceElement = document.getElementById('balance');
+        const betAmountInput = document.getElementById('betAmountInput');
+        const gameArea = document.getElementById('gameArea');
+        const crashLine = document.getElementById('crashLine');
+        const logElement = document.getElementById('log');
 
-        // Очистка графика
-        function clearGraph() {
-            const graphCanvas = document.getElementById('crashGraph');
-            const ctx = graphCanvas.getContext('2d');
-            ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
-        }
+        let balance = 50000;
+        let betAmount = 0;
+        let crashMultiplier = 1;
+        let gameStarted = false;
+        let gameCrashTime = 0;
+        let crashInterval;
 
-        // Отрисовка графика с цветовой градацией
-        function drawGraph(multiplier, step) {
-            const graphCanvas = document.getElementById('crashGraph');
-            const ctx = graphCanvas.getContext('2d');
+        startButton.addEventListener('click', startGame);
+        withdrawButton.addEventListener('click', withdraw);
 
-            const x = step * 2; // Шаг по оси X
-            const y = graphCanvas.height - (multiplier * 10); // Высота линии
-
-            let lineColor;
-
-            if (multiplier < 1.5) {
-                lineColor = 'red'; // Красный для коэффициентов до 1.5
-            } else if (multiplier < 3) {
-                lineColor = 'blue'; // Синий для коэффициентов от 1.5 до 3
-            } else {
-                lineColor = 'green'; // Зеленый для коэффициентов от 3 и выше
-            }
-
-            ctx.strokeStyle = lineColor;
-            ctx.lineWidth = 2;
-
-            if (step === 0) {
-                ctx.beginPath();
-                ctx.moveTo(x, y);
-                ctx.lineTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
-
-            ctx.stroke();
-        }
-
-        // Обновление баланса
-        function updateBalance(newBalance) {
-            document.getElementById('userBalance').textContent = newBalance.toFixed(2);
-        }
-
-        // Регистрация пользователя
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const username = document.getElementById('username').value.trim(); // Удаляем пробелы
-            const password = document.getElementById('password').value.trim(); // Удаляем пробелы
-
-            if (!username || !password) {
-                alert("Введите имя пользователя и пароль!");
+        function startGame() {
+            betAmount = parseInt(betAmountInput.value);
+            if (isNaN(betAmount) || betAmount <= 0 || betAmount > balance) {
+                alert('Введите правильную сумму для ставки');
                 return;
             }
 
-            try {
-                const response = await fetch('https://kalaizer.github.io/Crash/register', { // ЗАМЕНИТЕ НА СВОЙ URL
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
+            balance -= betAmount;
+            balanceElement.textContent = `Баланс: ${balance} монет`;
 
-                const result = await response.json();
+            gameStarted = true;
+            gameCrashTime = 0;
+            crashMultiplier = 1;
+            crashLine.style.height = '5px';
+            crashLine.style.bottom = '10px';
+            gameArea.style.backgroundColor = 'black';
+            logElement.innerHTML = '';
 
-                if (result.success) {
-                    alert(result.message);
-                    userId = result.userId;
-                    loadBalance();
-                    startGamePolling(); // Начинаем опрос состояния игры
-                } else {
-                    alert(result.error || "Произошла ошибка при регистрации.");
-                }
-            } catch (error) {
-                console.error(error);
-                alert("Не удалось связаться с сервером. Проверьте подключение к интернету.");
-            }
-        });
+            startButton.disabled = true;
+            withdrawButton.style.display = 'none';
 
-        // Загрузка баланса пользователя
-        async function loadBalance() {
-            if (!userId) return;
+            crashInterval = setInterval(() => {
+                if (gameStarted && crashMultiplier < 100) {
+                    crashMultiplier += 0.1;
+                    crashLine.style.height = `${crashMultiplier * 3}px`;
+                    crashLine.style.bottom = `${10 + crashMultiplier * 3}px`;
 
-            try {
-                const response = await fetch(`https://kalaizer.github.io/Crash/get-balance/${userId}`); // ЗАМЕНИТЕ НА СВОЙ URL
-                const data = await response.json();
-
-                if (data.balance !== undefined) {
-                    updateBalance(data.balance);
-                }
-            } catch (error) {
-                console.error(error);
-                alert("Не удалось загрузить баланс. Проверьте подключение к интернету.");
-            }
-        }
-
-        // Опрос состояния игры
-        function startGamePolling() {
-            setInterval(async () => {
-                try {
-                    const response = await fetch('https://kalaizer.github.io/Crash/game-status'); // ЗАМЕНИТЕ НА СВОЙ URL
-                    const data = await response.json();
-
-                    if (data.inProgress) {
-                        document.getElementById('currentMultiplier').textContent = `${data.multiplier.toFixed(2)}x`;
-                        drawGraph(data.multiplier, Math.floor(data.multiplier * 10)); // Отрисовка графика
-                        document.getElementById('timer').textContent = ''; // Очищаем таймер
-                        document.getElementById('cashOut').disabled = false;
-                    } else {
-                        document.getElementById('cashOut').disabled = true;
-                        clearGraph();
-                        document.getElementById('timer').textContent = data.countdown; // Отображаем таймер
+                    if (crashMultiplier >= gameCrashTime) {
+                        endGame('Игра окончена. Крах! Ваш множитель: ' + crashMultiplier.toFixed(2));
+                        clearInterval(crashInterval);
                     }
-                } catch (error) {
-                    console.error(error);
                 }
             }, 100);
+
+            setTimeout(() => {
+                gameCrashTime = Math.random() * 10 + 2;
+            }, 500);
         }
 
-        // Забрать выигрыш
-        document.getElementById('cashOut').addEventListener('click', async () => {
-            const betAmount = parseFloat(document.getElementById('betAmount').value);
-            const currentMultiplier = parseFloat(document.getElementById('currentMultiplier').textContent.replace('x', ''));
-            const currentBalance = parseFloat(document.getElementById('userBalance').textContent);
+        function endGame(message) {
+            logMessage(message);
 
-            if (isNaN(betAmount) || betAmount <= 0 || betAmount > currentBalance * 10) {
-                alert("Неверная ставка!");
-                return;
-            }
-
-            const winnings = betAmount * currentMultiplier;
-
-            const newBalance = currentBalance + (winnings / 10);
-
-            updateBalance(newBalance);
-
-            try {
-                await fetch('https://kalaizer.github.io/Crash/admin/set-balance', { // ЗАМЕНИТЕ НА СВОЙ URL
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, newBalance: newBalance * 10, adminPassword: '1001' })
-                });
-
-                alert(`Вы забрали выигрыш! Ваш новый баланс: ${newBalance.toFixed(2)} ₽`);
-            } catch (error) {
-                console.error(error);
-                alert("Не удалось обновить баланс. Попробуйте позже.");
-            }
-        });
-
-        // Получение последних 10 коэффициентов
-        async function fetchLastMultipliers() {
-            try {
-                const response = await fetch('https://kalaizer.github.io/Crash/get-last-multipliers'); // ЗАМЕНИТЕ НА СВОЙ URL
-                const data = await response.json();
-
-                const list = document.getElementById('multipliersList');
-                list.innerHTML = ''; // Очищаем список
-
-                data.multipliers.forEach(multiplier => {
-                    const li = document.createElement('li');
-                    li.textContent = `${multiplier.toFixed(2)}x`;
-                    list.appendChild(li);
-                });
-            } catch (error) {
-                console.error(error);
-            }
-        }
-
-        // Обновляем список каждые 5 секунд
-        setInterval(fetchLastMultipliers, 5000);
-        fetchLastMultipliers(); // Первичное получение
-
-        // Панель администратора
-        document.getElementById('openAdminPanel').addEventListener('click', () => {
-            const adminControls = document.getElementById('adminControls');
-            if (isAdminPanelOpen) {
-                adminControls.style.display = 'none';
-                isAdminPanelOpen = false;
+            if (crashMultiplier >= gameCrashTime) {
+                logMessage('Вы не успели забрать ставку!');
             } else {
-                adminControls.style.display = 'block';
-                isAdminPanelOpen = true;
-            }
-        });
-
-        // Изменение баланса через админ-панель
-        document.getElementById('setBalance').addEventListener('click', async () => {
-            const adminPassword = document.getElementById('adminPassword').value.trim(); // Удаляем пробелы
-            const newBalance = parseFloat(document.getElementById('newBalance').value);
-
-            if (!userId || isNaN(newBalance) || adminPassword !== '1001') {
-                alert("Неверный пароль администратора или данные введены некорректно!");
-                return;
+                balance += betAmount * crashMultiplier;
+                balanceElement.textContent = `Баланс: ${balance.toFixed(2)} монет`;
             }
 
-            try {
-                await fetch('https:///admin/set-balance', { // ЗАМЕНИТЕ НА СВОЙ URL
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, newBalance: newBalance * 10, adminPassword: '1001' })
-                });
+            startButton.disabled = false;
+            withdrawButton.style.display = 'inline';
+            gameStarted = false;
+            crashMultiplier = 1;
+            crashLine.style.height = '5px';
+        }
 
-                alert("Баланс успешно изменен!");
-                loadBalance();
-            } catch (error) {
-                console.error(error);
-                alert("Не удалось изменить баланс. Попробуйте позже.");
+        function logMessage(message) {
+            const logEntry = document.createElement('div');
+            logEntry.textContent = message;
+            logElement.prepend(logEntry);
+        }
+
+        function withdraw() {
+            if (balance > 0) {
+                alert(`Вы вывели ${balance.toFixed(2)} монет`);
+                balance = 0;
+                balanceElement.textContent = 'Баланс: 0 монет';
+            } else {
+                alert('У вас нет средств для вывода');
             }
-        });
+        }
     </script>
 </body>
 </html>
