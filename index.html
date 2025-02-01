@@ -120,6 +120,9 @@
     let currentCoefficient = 1;
     let gameHistory = [];
     let gameInterval;
+    let coefficientIncreaseRate = 0.01;  // начальная скорость увеличения коэффициента
+    let timeElapsed = 0;  // время, прошедшее с начала игры
+    const MAX_COEFFICIENT = 1000;
 
     const startGameBtn = document.getElementById('startGameBtn');
     const betAmountInput = document.getElementById('betAmount');
@@ -139,10 +142,23 @@
 
     function startGame() {
       currentCoefficient = 1;
+      timeElapsed = 0;  // сброс времени
+      coefficientIncreaseRate = 0.01;  // сброс начальной скорости увеличения
       updateGraph();
 
       let interval = setInterval(() => {
-        currentCoefficient += 0.01; // Коэффициент увеличивается плавно
+        timeElapsed++;
+        currentCoefficient += coefficientIncreaseRate;  // увеличение коэффициента
+
+        // Ускорение роста коэффициента с течением времени
+        coefficientIncreaseRate += 0.001;  // скорость увеличения коэффициента
+
+        // Ограничение максимального коэффициента
+        if (currentCoefficient >= MAX_COEFFICIENT) {
+          currentCoefficient = MAX_COEFFICIENT;
+          clearInterval(interval);  // останавливаем игру, когда коэффициент достигает максимума
+        }
+
         updateGraph();
         currentCoefficientText.textContent = `Коэффициент: ${currentCoefficient.toFixed(2)}x`;
 
@@ -163,7 +179,7 @@
           if (gameHistory.length > 10) gameHistory.pop();
           updateHistory();
         }
-      }, 1000);
+      }, 100);  // обновление коэффициента каждые 100 миллисекунд
     }
 
     function updateHistory() {
