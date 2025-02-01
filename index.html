@@ -139,7 +139,7 @@
     const adminPanelBtn = document.getElementById('adminPanelBtn');
 
     function updateGraph() {
-      const scale = currentCoefficient;
+      const scale = currentCoefficient / 1000;  // нормализуем коэффициент
       graphElement.style.transform = `scaleY(${scale})`;
     }
 
@@ -179,4 +179,37 @@
           } else {
             explosionAudio.play();
             balance -= activeBet;
-            alert('Вы проиграли
+            alert('Вы проиграли!');
+          }
+
+          gameHistory.unshift(`Коэффициент: ${currentCoefficient.toFixed(2)}x`);
+          if (gameHistory.length > 10) gameHistory.pop();
+          updateHistory();
+        }
+      }, 1000);
+    }
+
+    function updatePredictedWin() {
+      if (betAmount > 0) {
+        predictedWinText.textContent = `Предполагаемый выигрыш: ${(betAmount * currentCoefficient).toFixed(2)}`;
+      }
+    }
+
+    function updateHistory() {
+      historyElement.innerHTML = 'История последних игр: ' + gameHistory.join(', ');
+    }
+
+    startGameBtn.addEventListener('click', () => {
+      betAmount = parseFloat(betAmountInput.value) || 0;
+      if (betAmount <= 0) {
+        alert('Пожалуйста, введите ставку.');
+        return;
+      }
+
+      if (betAmount > balance) {
+        alert('Недостаточно средств на балансе.');
+        return;
+      }
+
+      balance -= betAmount;
+      balanceText.textContent
