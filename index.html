@@ -216,6 +216,12 @@
         timeElapsed++;
         currentCoefficient += 0.49;  // увеличение коэффициента быстрее
 
+        // Увеличиваем скорость роста коэффициента с каждым шагом
+        const speedMultiplier = 1 + (currentCoefficient / 1000);
+        const growthRate = 0.01 * speedMultiplier;
+
+        currentCoefficient += growthRate;
+
         // Ограничение максимального коэффициента
         if (currentCoefficient >= MAX_COEFFICIENT) {
           currentCoefficient = MAX_COEFFICIENT;
@@ -223,94 +229,4 @@
         }
 
         updateGraph();
-        currentCoefficientText.textContent = `Коэффициент: ${currentCoefficient.toFixed(2)}x`;
-
-        // Обновление предполагаемого выигрыша
-        updatePredictedWin();
-
-        if (Math.random() < 0.1) {
-          clearInterval(interval);
-          const isWin = Math.random() < 0.5;
-          if (isWin) {
-            winAudio.play();
-            balance += activeBet * currentCoefficient;
-            balance = roundToTenth(balance);
-            alert(`Вы выиграли! Ваш выигрыш: ${roundToTenth(activeBet * currentCoefficient)}`);
-          } else {
-            explosionAudio.play();
-            balance -= activeBet;
-            balance = roundToTenth(balance);
-            alert('Вы проиграли!');
-          }
-
-          gameHistory.unshift(`${currentCoefficient.toFixed(2)}x`);
-          if (gameHistory.length > 10) gameHistory.pop();
-          updateHistory();
-        }
-      }, 1000);
-    }
-
-    function updatePredictedWin() {
-      if (betAmount > 0) {
-        predictedWinText.textContent = `Предполагаемый выигрыш: ${(betAmount * currentCoefficient).toFixed(2)}`;
-      }
-    }
-
-    function updateHistory() {
-      historyElement.innerHTML = 'История последних игр: ' + gameHistory.join(', ');
-    }
-
-    startGameBtn.addEventListener('click', () => {
-      betAmount = parseFloat(betAmountInput.value) || 0;
-      if (betAmount <= 0) {
-        alert('Пожалуйста, введите ставку.');
-        return;
-      }
-
-      if (betAmount > balance) {
-        alert('Недостаточно средств на балансе.');
-        return;
-      }
-
-      balance -= betAmount;
-      balance = roundToTenth(balance);
-      balanceText.textContent = `Баланс: ${balance.toFixed(1)}`;
-      startGame();
-    });
-
-    withdrawBtn.addEventListener('click', () => {
-      if (!activeBet) {
-        alert('Сначала сделайте ставку.');
-        return;
-      }
-
-      const predictedWin = betAmount * currentCoefficient;
-      alert(`Вы можете вывести ${predictedWin.toFixed(2)}. Если хотите вывести средства, нажмите "Вывести".`);
-    });
-
-    adminLoginBtn.addEventListener('click', () => {
-      const enteredPassword = adminPasswordInput.value;
-      if (enteredPassword === '1001') {
-        adminControls.classList.remove('hidden');
-        alert('Вы успешно вошли в панель администратора.');
-      } else {
-        alert('Неверный пароль.');
-      }
-    });
-
-    adminAddBalanceBtn.addEventListener('click', () => {
-      const amountToAdd = parseFloat(adminBalanceAmountInput.value);
-      if (isNaN(amountToAdd) || amountToAdd <= 0) {
-        alert('Введите корректную сумму.');
-        return;
-      }
-
-      balance += amountToAdd;
-      balance = roundToTenth(balance);
-      balanceText.textContent = `Баланс: ${balance.toFixed(1)}`;
-      alert(`Баланс увеличен на ${amountToAdd}`);
-    });
-
-  </script>
-</body>
-</html>
+        currentCoefficientText.textContent = `Коэффициент: ${currentCoefficient.to
