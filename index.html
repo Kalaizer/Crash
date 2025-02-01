@@ -81,7 +81,7 @@
   <script>
     let balance = 1000;
     let betAmount = 0;
-    let currentCoefficient = 1;
+    let currentCoefficient = 1.00;
     let gameHistory = [];
     let activeBet = null;
     let gameInProgress = false;
@@ -105,7 +105,7 @@
     function startGame() {
       if (gameInProgress) return;
       gameInProgress = true;
-      currentCoefficient = 1;
+      currentCoefficient = 1.00;
       activeBet = parseFloat(betAmountInput.value) || 0;
 
       if (activeBet > balance) {
@@ -118,8 +118,8 @@
       balanceText.textContent = `Баланс: ${roundToTenth(balance)} рублей`;
 
       let interval = setInterval(() => {
-        currentCoefficient += 0.1;
-        currentCoefficientText.textContent = `Коэффициент: ${roundToTenth(currentCoefficient)}x`;
+        currentCoefficient += 0.01;
+        currentCoefficientText.textContent = `Коэффициент: ${currentCoefficient.toFixed(2)}x`;
         updatePredictedWin();
 
         if (currentCoefficient >= MAX_COEFFICIENT) {
@@ -136,8 +136,8 @@
 
     function endGame() {
       gameInProgress = false;
-      let finalCoefficient = roundToTenth(currentCoefficient);
-      
+      let finalCoefficient = parseFloat(currentCoefficient.toFixed(2));
+
       if (!gameHistory.includes(finalCoefficient)) {
         gameHistory.unshift(finalCoefficient);
         if (gameHistory.length > 10) gameHistory.pop();
