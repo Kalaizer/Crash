@@ -96,6 +96,31 @@
       font-size: 12px;
       color: #fff;
     }
+
+    .admin-panel {
+      margin-top: 20px;
+      background-color: #333;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    .admin-input {
+      padding: 8px;
+      margin: 10px;
+      font-size: 1.2em;
+      border-radius: 5px;
+      border: none;
+    }
+
+    .admin-button {
+      background-color: #ff6f00;
+      padding: 10px 20px;
+      font-size: 1.2em;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -116,6 +141,13 @@
       <div class="graph-labels" id="graphLabels"></div>
     </div>
     <div id="history" class="history">История последних игр:</div>
+  </div>
+
+  <div class="admin-panel">
+    <h3>Админ-панель</h3>
+    <input type="password" id="adminPassword" class="admin-input" placeholder="Введите пароль" />
+    <input type="number" id="adminAmount" class="admin-input" placeholder="Сумма для пополнения" />
+    <button class="admin-button" id="adminAddMoney">Добавить деньги</button>
   </div>
 
   <audio id="explosionAudio" src="explosion.mp3" preload="auto"></audio>
@@ -143,6 +175,9 @@
     const winAudio = document.getElementById('winAudio');
     const withdrawBtn = document.getElementById('withdrawBtn');
     const graphLabels = document.getElementById('graphLabels');
+    const adminPasswordInput = document.getElementById('adminPassword');
+    const adminAmountInput = document.getElementById('adminAmount');
+    const adminAddMoneyBtn = document.getElementById('adminAddMoney');
 
     function roundToTenth(num) {
       return Math.round(num * 10) / 10;
@@ -211,7 +246,37 @@
         alert('Введите правильную сумму ставки!');
         return;
       }
+      if (betAmount > balance) {
+        alert('У вас недостаточно средств для этой ставки!');
+        return;
+      }
       startGame();
+    });
+
+    withdrawBtn.addEventListener('click', function() {
+      if (activeBet !== null) {
+        alert('Вы не можете вывести средства, пока не завершится игра.');
+        return;
+      }
+
+      const predictedWin = roundToTenth(currentCoefficient * betAmount);
+      balance += predictedWin;
+      balanceText.textContent = `Баланс: ${roundToTenth(balance)} рублей`;
+      alert(`Вы вывели ${predictedWin} рублей!`);
+      activeBet = null;
+    });
+
+    adminAddMoneyBtn.addEventListener('click', function() {
+      const password = adminPasswordInput.value;
+      const amountToAdd = parseFloat(adminAmountInput.value);
+
+      if (password === ADMIN_PASSWORD && !isNaN(amountToAdd) && amountToAdd > 0) {
+        balance += amountToAdd;
+        balanceText.textContent = `Баланс: ${roundToTenth(balance)} рублей`;
+        alert(`Админ пополнил баланс на ${amountToAdd} рублей!`);
+      } else {
+        alert('Неверный пароль или некорректная сумма!');
+      }
     });
   </script>
 </body>
