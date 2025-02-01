@@ -100,6 +100,7 @@
     </div>
     <div>
       <button class="button" id="startGameBtn">Старт</button>
+      <button class="button" id="withdrawBtn">Вывести</button>
       <button class="button" id="adminPanelBtn">Панель Админа</button>
     </div>
     <div id="balance">Баланс: 1000</div>
@@ -123,6 +124,7 @@
     let coefficientIncreaseRate = 0.01;  // начальная скорость увеличения коэффициента
     let timeElapsed = 0;  // время, прошедшее с начала игры
     const MAX_COEFFICIENT = 1000;
+    let activeBet = null;  // Ставка, сделанная пользователем на текущую игру
 
     const startGameBtn = document.getElementById('startGameBtn');
     const betAmountInput = document.getElementById('betAmount');
@@ -133,6 +135,7 @@
     const historyElement = document.getElementById('history');
     const explosionAudio = document.getElementById('explosionAudio');
     const winAudio = document.getElementById('winAudio');
+    const withdrawBtn = document.getElementById('withdrawBtn');
     const adminPanelBtn = document.getElementById('adminPanelBtn');
 
     function updateGraph() {
@@ -144,6 +147,7 @@
       currentCoefficient = 1;
       timeElapsed = 0;  // сброс времени
       coefficientIncreaseRate = 0.01;  // сброс начальной скорости увеличения
+      activeBet = betAmount;  // Сохраняем текущую ставку
       updateGraph();
 
       let interval = setInterval(() => {
@@ -167,11 +171,11 @@
           const isWin = Math.random() < 0.5;
           if (isWin) {
             winAudio.play();
-            balance += betAmount * currentCoefficient;
-            alert(`Вы выиграли! Ваш выигрыш: ${betAmount * currentCoefficient}`);
+            balance += activeBet * currentCoefficient;
+            alert(`Вы выиграли! Ваш выигрыш: ${activeBet * currentCoefficient}`);
           } else {
             explosionAudio.play();
-            balance -= betAmount;
+            balance -= activeBet;
             alert('Вы проиграли!');
           }
 
@@ -188,8 +192,10 @@
 
     // Функция обновления предполагаемого выигрыша
     function updatePredictedWin() {
-      const predictedWin = betAmount * currentCoefficient;
-      predictedWinText.textContent = `Предполагаемый выигрыш: ${predictedWin.toFixed(2)}`;
+      if (activeBet > 0) {
+        const predictedWin = activeBet * currentCoefficient;
+        predictedWinText.textContent = `Предполагаемый выигрыш: ${predictedWin.toFixed(2)}`;
+      }
     }
 
     startGameBtn.addEventListener('click', () => {
@@ -208,6 +214,19 @@
       balanceText.textContent = `Баланс: ${balance}`;
       updatePredictedWin();
       startGame();
+    });
+
+    withdrawBtn.addEventListener('click', () => {
+      if (activeBet <= 0) {
+        alert('Ставка не была сделана!');
+        return;
+      }
+
+      const withdrawAmount = betAmount * currentCoefficient;
+      balance += withdrawAmount;
+      balanceText.textContent = `Баланс: ${balance}`;
+      alert(`Вы вывели деньги! Выигрыш: ${withdrawAmount.toFixed(2)}`);
+      activeBet = 0;  // сброс активной ставки
     });
 
     // Обновление предполагаемого выигрыша при изменении ставки
