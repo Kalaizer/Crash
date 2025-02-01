@@ -82,7 +82,7 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      background-color: #fff;  /* Изменен цвет графика на белый */
+      background-color: #fff;
       transform-origin: bottom left;
       transition: transform 0.1s linear;
     }
@@ -104,6 +104,17 @@
       width: 300px;
       text-align: center;
     }
+
+    .graph-labels {
+      position: absolute;
+      left: 0;
+      bottom: -25px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -121,6 +132,7 @@
     <div id="predictedWin">Предполагаемый выигрыш: 0.00</div>
     <div class="graph-container">
       <div class="graph" id="graph"></div>
+      <div class="graph-labels" id="graphLabels"></div>
     </div>
     <div id="history" class="history">История последних игр:</div>
   </div>
@@ -144,7 +156,6 @@
     let currentCoefficient = 1;
     let gameHistory = [];
     let gameInterval;
-    let coefficientIncreaseRate = 0.07;  // увеличенная скорость роста коэффициента
     let timeElapsed = 0;  // время, прошедшее с начала игры
     const MAX_COEFFICIENT = 1000;
     let activeBet = null;  // Ставка, сделанная пользователем на текущую игру
@@ -166,30 +177,44 @@
     const adminControls = document.getElementById('adminControls');
     const adminBalanceAmountInput = document.getElementById('adminBalanceAmount');
     const adminAddBalanceBtn = document.getElementById('adminAddBalanceBtn');
+    const graphLabels = document.getElementById('graphLabels');
 
     function roundToTenth(num) {
       return Math.round(num * 10) / 10;
     }
 
     function updateGraph() {
-      const scale = currentCoefficient / 1000;  // нормализуем коэффициент, чтобы он подходил для графика
-      graphElement.style.height = `${scale * 100}%`;
+      // Коэффициент — это наша "высота" графика
+      graphElement.style.height = `${Math.min(currentCoefficient, MAX_COEFFICIENT)}%`;  // Максимум 100% по высоте
       graphElement.style.transition = "height 0.1s ease-in-out";
+      
+      // Обновление пометок на графике
+      updateGraphLabels();
+    }
+
+    function updateGraphLabels() {
+      graphLabels.innerHTML = '';
+      const labelStep = Math.floor(MAX_COEFFICIENT / 5);  // Разделим график на 5 меток
+      for (let i = 0; i <= 5; i++) {
+        const labelValue = i * labelStep;
+        const label = document.createElement('div');
+        label.textContent = `${labelValue}x`;
+        label.style.width = `${100 / 5}%`;  // Разделим на 5 частей
+        label.style.textAlign = 'center';
+        label.style.color = '#fff';
+        graphLabels.appendChild(label);
+      }
     }
 
     function startGame() {
       currentCoefficient = 1;
       timeElapsed = 0;  // сброс времени
-      coefficientIncreaseRate = 0.07;  // сброс скорости увеличения коэффициента
       activeBet = betAmount;  // Сохраняем текущую ставку
       updateGraph();
 
       let interval = setInterval(() => {
         timeElapsed++;
-        currentCoefficient += coefficientIncreaseRate;  // увеличение коэффициента
-
-        // Ускорение роста коэффициента с течением времени
-        coefficientIncreaseRate += 0.01;  // скорость увеличения коэффициента
+        currentCoefficient += 0.49;  // увеличение коэффициента быстрее
 
         // Ограничение максимального коэффициента
         if (currentCoefficient >= MAX_COEFFICIENT) {
@@ -265,7 +290,7 @@
 
     adminLoginBtn.addEventListener('click', () => {
       const enteredPassword = adminPasswordInput.value;
-      if (enteredPassword === ADMIN_PASSWORD) {
+      if (enteredPassword === '1001') {
         adminControls.classList.remove('hidden');
         alert('Вы успешно вошли в панель администратора.');
       } else {
