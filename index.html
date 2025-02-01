@@ -168,8 +168,8 @@
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            const username = document.getElementById('username').value.trim(); // Удаляем пробелы
+            const password = document.getElementById('password').value.trim(); // Удаляем пробелы
 
             if (!username || !password) {
                 alert("Введите имя пользователя и пароль!");
@@ -177,7 +177,7 @@
             }
 
             try {
-                const response = await fetch('https://your-replit-project-name.your-username.repl.dev/register', { // ЗАМЕНИТЕ НА СВОЙ URL
+                const response = await fetch('https://kalaizer.github.io/Crash/register', { // ЗАМЕНИТЕ НА СВОЙ URL
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
@@ -204,7 +204,7 @@
             if (!userId) return;
 
             try {
-                const response = await fetch(`https://your-replit-project-name.your-username.repl.dev/get-balance/${userId}`); // ЗАМЕНИТЕ НА СВОЙ URL
+                const response = await fetch(`https://kalaizer.github.io/Crash/get-balance/${userId}`); // ЗАМЕНИТЕ НА СВОЙ URL
                 const data = await response.json();
 
                 if (data.balance !== undefined) {
@@ -220,7 +220,7 @@
         function startGamePolling() {
             setInterval(async () => {
                 try {
-                    const response = await fetch('https://your-replit-project-name.your-username.repl.dev/game-status'); // ЗАМЕНИТЕ НА СВОЙ URL
+                    const response = await fetch('https://kalaizer.github.io/Crash/game-status'); // ЗАМЕНИТЕ НА СВОЙ URL
                     const data = await response.json();
 
                     if (data.inProgress) {
@@ -257,7 +257,7 @@
             updateBalance(newBalance);
 
             try {
-                await fetch('https://your-replit-project-name.your-username.repl.dev/admin/set-balance', { // ЗАМЕНИТЕ НА СВОЙ URL
+                await fetch('https://kalaizer.github.io/Crash/admin/set-balance', { // ЗАМЕНИТЕ НА СВОЙ URL
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId, newBalance: newBalance * 10, adminPassword: '1001' })
@@ -273,7 +273,7 @@
         // Получение последних 10 коэффициентов
         async function fetchLastMultipliers() {
             try {
-                const response = await fetch('https://your-replit-project-name.your-username.repl.dev/get-last-multipliers'); // ЗАМЕНИТЕ НА СВОЙ URL
+                const response = await fetch('https://kalaizer.github.io/Crash/get-last-multipliers'); // ЗАМЕНИТЕ НА СВОЙ URL
                 const data = await response.json();
 
                 const list = document.getElementById('multipliersList');
@@ -307,7 +307,7 @@
 
         // Изменение баланса через админ-панель
         document.getElementById('setBalance').addEventListener('click', async () => {
-            const adminPassword = document.getElementById('adminPassword').value;
+            const adminPassword = document.getElementById('adminPassword').value.trim(); // Удаляем пробелы
             const newBalance = parseFloat(document.getElementById('newBalance').value);
 
             if (!userId || isNaN(newBalance) || adminPassword !== '1001') {
@@ -316,7 +316,7 @@
             }
 
             try {
-                await fetch('https://your-replit-project-name.your-username.repl.dev/admin/set-balance', { // ЗАМЕНИТЕ НА СВОЙ URL
+                await fetch('https:///admin/set-balance', { // ЗАМЕНИТЕ НА СВОЙ URL
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId, newBalance: newBalance * 10, adminPassword: '1001' })
