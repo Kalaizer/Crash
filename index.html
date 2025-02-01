@@ -81,7 +81,7 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      background-color: #ff6f00;
+      background-color: #fff;  /* Изменен цвет графика на белый */
       transform-origin: bottom left;
       transition: transform 0.1s linear;
     }
@@ -90,6 +90,13 @@
       display: none;
     }
 
+    .admin-panel {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #444;
+      border-radius: 5px;
+      color: #ff6f00;
+    }
   </style>
 </head>
 <body>
@@ -110,6 +117,12 @@
       <div class="graph" id="graph"></div>
     </div>
     <div id="history" class="history">История последних игр:</div>
+    <div id="adminPanel" class="admin-panel hidden">
+      <h3>Панель администратора</h3>
+      <input type="password" id="adminPassword" placeholder="Введите пароль" class="input-field" />
+      <button class="button" id="adminLoginBtn">Войти</button>
+      <button class="button hidden" id="adminBalanceBtn">Безлимитный баланс</button>
+    </div>
   </div>
 
   <audio id="explosionAudio" src="explosion.mp3" preload="auto"></audio>
@@ -125,6 +138,7 @@
     let timeElapsed = 0;  // время, прошедшее с начала игры
     const MAX_COEFFICIENT = 1000;
     let activeBet = null;  // Ставка, сделанная пользователем на текущую игру
+    const ADMIN_PASSWORD = '1001';  // Пароль для входа в панель администратора
 
     const startGameBtn = document.getElementById('startGameBtn');
     const betAmountInput = document.getElementById('betAmount');
@@ -137,6 +151,10 @@
     const winAudio = document.getElementById('winAudio');
     const withdrawBtn = document.getElementById('withdrawBtn');
     const adminPanelBtn = document.getElementById('adminPanelBtn');
+    const adminPanel = document.getElementById('adminPanel');
+    const adminPasswordInput = document.getElementById('adminPassword');
+    const adminLoginBtn = document.getElementById('adminLoginBtn');
+    const adminBalanceBtn = document.getElementById('adminBalanceBtn');
 
     function roundToTenth(num) {
       return Math.round(num * 10) / 10;
@@ -233,6 +251,27 @@
       const predictedWin = betAmount * currentCoefficient;
       alert(`Вы можете вывести ${predictedWin.toFixed(2)}. Если хотите вывести средства, нажмите "Вывести".`);
     });
+
+    adminPanelBtn.addEventListener('click', () => {
+      adminPanel.classList.toggle('hidden');
+    });
+
+    adminLoginBtn.addEventListener('click', () => {
+      const enteredPassword = adminPasswordInput.value;
+      if (enteredPassword === ADMIN_PASSWORD) {
+        adminBalanceBtn.classList.remove('hidden');
+        alert('Вы успешно вошли в панель администратора.');
+      } else {
+        alert('Неверный пароль.');
+      }
+    });
+
+    adminBalanceBtn.addEventListener('click', () => {
+      balance = Infinity;
+      balanceText.textContent = `Баланс: Безлимитный`;
+      alert('Баланс установлен на безлимитный!');
+    });
+
   </script>
 </body>
 </html>
