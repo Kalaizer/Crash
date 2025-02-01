@@ -166,6 +166,9 @@
         updateGraph();
         currentCoefficientText.textContent = `Коэффициент: ${currentCoefficient.toFixed(2)}x`;
 
+        // Обновление предполагаемого выигрыша
+        updatePredictedWin();
+
         if (Math.random() < 0.1) {
           clearInterval(interval);
           const isWin = Math.random() < 0.5;
@@ -176,80 +179,4 @@
           } else {
             explosionAudio.play();
             balance -= activeBet;
-            alert('Вы проиграли!');
-          }
-
-          gameHistory.unshift(`Коэффициент: ${currentCoefficient.toFixed(2)}x`);
-          if (gameHistory.length > 10) gameHistory.pop();
-          updateHistory();
-        }
-      }, 100);  // обновление коэффициента каждые 100 миллисекунд
-    }
-
-    function updateHistory() {
-      historyElement.innerHTML = 'История последних игр: ' + gameHistory.join(', ');
-    }
-
-    // Функция обновления предполагаемого выигрыша
-    function updatePredictedWin() {
-      if (activeBet > 0) {
-        const predictedWin = activeBet * currentCoefficient;
-        predictedWinText.textContent = `Предполагаемый выигрыш: ${predictedWin.toFixed(2)}`;
-      }
-    }
-
-    startGameBtn.addEventListener('click', () => {
-      betAmount = parseFloat(betAmountInput.value) || 0;
-      if (betAmount <= 0) {
-        alert('Пожалуйста, введите ставку.');
-        return;
-      }
-
-      if (betAmount > balance) {
-        alert('Недостаточно средств на балансе.');
-        return;
-      }
-
-      balance -= betAmount;
-      balanceText.textContent = `Баланс: ${balance}`;
-      updatePredictedWin();
-      startGame();
-    });
-
-    withdrawBtn.addEventListener('click', () => {
-      if (activeBet <= 0) {
-        alert('Ставка не была сделана!');
-        return;
-      }
-
-      const withdrawAmount = betAmount * currentCoefficient;
-      balance += withdrawAmount;
-      balanceText.textContent = `Баланс: ${balance}`;
-      alert(`Вы вывели деньги! Выигрыш: ${withdrawAmount.toFixed(2)}`);
-      activeBet = 0;  // сброс активной ставки
-    });
-
-    // Обновление предполагаемого выигрыша при изменении ставки
-    betAmountInput.addEventListener('input', () => {
-      betAmount = parseFloat(betAmountInput.value) || 0;
-      updatePredictedWin();
-    });
-
-    adminPanelBtn.addEventListener('click', () => {
-      const adminPassword = prompt('Введите пароль для панели администратора:');
-      if (adminPassword === '1001') {
-        const addCoins = parseFloat(prompt('Введите количество монет для добавления:'));
-        if (!isNaN(addCoins)) {
-          balance += addCoins;
-          balanceText.textContent = `Баланс: ${balance}`;
-          alert('Монеты успешно добавлены!');
-        } else {
-          alert('Ошибка при добавлении монет.');
-        }
-      } else {
-        alert('Неверный пароль!');
-      }
-    });
-  </script>
-</body>
-</html>
+            alert('Вы проиграли
