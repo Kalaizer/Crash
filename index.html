@@ -1,155 +1,316 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crash Game</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
-        // 🔥 ТВОЯ КОНФИГУРАЦИЯ FIREBASE (ЗАМЕНИ ДАННЫМИ ИЗ FIREBASE)
-        const firebaseConfig = {
-            apiKey: "ТВОЙ_API_KEY",
-            authDomain: "ТВОЙ_AUTH_DOMAIN",
-            projectId: "ТВОЙ_PROJECT_ID",
-            storageBucket: "ТВОЙ_STORAGE_BUCKET",
-            messagingSenderId: "ТВОЙ_MESSAGING_SENDER_ID",
-            appId: "ТВОЙ_APP_ID"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Ссылки на данные Firebase
-        const gameRef = doc(db, "game", "current");
-        const historyRef = collection(db, "history");
-        const userBalanceRef = doc(db, "users", "user1");
-
-        let balance = 0;
-        let betAmount = 0;
-        let isBetPlaced = false;
-        let coefficient = 1.0;
-        let interval;
-        let timer = 5;
-
-        // 🔥 Запуск нового раунда
-        async function startGame() {
-            coefficient = 1.0;
-            timer = 5;
-            document.getElementById("timer").innerText = `Новый раунд через: ${timer}`;
-            
-            let countdown = setInterval(() => {
-                timer--;
-                document.getElementById("timer").innerText = `Новый раунд через: ${timer}`;
-                if (timer === 0) clearInterval(countdown);
-            }, 1000);
-
-            await new Promise(resolve => setTimeout(resolve, 5000));
-
-            interval = setInterval(async () => {
-                coefficient += 0.01;
-                await setDoc(gameRef, { coefficient: coefficient }, { merge: true });
-
-                if (coefficient >= 10) stopGame();
-            }, 100);
-        }
-
-        // 🔥 Остановить игру
-        async function stopGame() {
-            clearInterval(interval);
-            document.getElementById("history").innerHTML += `<p>${coefficient.toFixed(2)}x</p>`;
-            await addDoc(historyRef, { coefficient: coefficient });
-
-            isBetPlaced = false;
-            setTimeout(startGame, 5000);
-        }
-
-        // 🔥 Обновление коэффициента в реальном времени
-        onSnapshot(gameRef, (doc) => {
-            if (doc.exists()) {
-                coefficient = doc.data().coefficient;
-                document.getElementById("coefficientDisplay").innerText = `Коэффициент: ${coefficient.toFixed(2)}x`;
-            }
-        });
-
-        // 🔥 Обновление баланса
-        onSnapshot(userBalanceRef, (doc) => {
-            if (doc.exists()) {
-                balance = doc.data().balance;
-                document.getElementById("balance").innerText = `Баланс: ${balance.toFixed(1)} монет`;
-            }
-        });
-
-        // 🔥 Сделать ставку
-        async function placeBet() {
-            if (isBetPlaced) {
-                alert("Вы уже сделали ставку!");
-                return;
-            }
-
-            let inputAmount = parseFloat(document.getElementById("betAmount").value);
-            if (isNaN(inputAmount) || inputAmount <= 0 || inputAmount > balance) {
-                alert("Неверная сумма ставки!");
-                return;
-            }
-
-            betAmount = inputAmount;
-            balance -= betAmount;
-            isBetPlaced = true;
-
-            await setDoc(userBalanceRef, { balance: balance }, { merge: true });
-        }
-
-        // 🔥 Вывести деньги
-        async function cashOut() {
-            if (!isBetPlaced) return;
-            balance += betAmount * coefficient;
-            isBetPlaced = false;
-
-            await setDoc(userBalanceRef, { balance: balance }, { merge: true });
-        }
-
-        // 🔥 Панель администратора
-        function showAdminPanel() {
-            let password = prompt("Введите пароль:");
-            if (password === "1001") {
-                let amount = parseFloat(prompt("Введите сумму для добавления:"));
-                if (!isNaN(amount) && amount > 0) {
-                    setDoc(userBalanceRef, { balance: balance + amount }, { merge: true });
-                }
-            } else {
-                alert("Неверный пароль!");
-            }
-        }
-
-        window.placeBet = placeBet;
-        window.cashOut = cashOut;
-        window.showAdminPanel = showAdminPanel;
-
-        startGame(); // Запускаем игру
-    </script>
     <style>
-        body { text-align: center; font-family: Arial, sans-serif; background-color: #222; color: #fff; }
-        button { margin: 5px; padding: 10px 20px; background: orange; border: none; cursor: pointer; }
-        input { padding: 10px; }
-        .admin { position: fixed; bottom: 10px; right: 10px; background: red; padding: 5px 10px; cursor: pointer; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            width: 60%;
+            background-color: #333;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        #graph {
+            width: 100%;
+            height: 300px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            background-color: #222;
+        }
+
+        .balance, .bet {
+            font-size: 24px;
+            margin: 10px 0;
+        }
+
+        .bet-input {
+            padding: 10px;
+            font-size: 20px;
+            width: 100px;
+            margin-right: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #ff6600;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:disabled {
+            background-color: #555;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: #e85c00;
+        }
+
+        #timer {
+            font-size: 30px;
+            margin-top: 10px;
+        }
+
+        .auth-form {
+            display: none;
+            text-align: center;
+        }
+
+        .auth-form input {
+            padding: 10px;
+            font-size: 18px;
+            margin: 10px;
+        }
+
+        .auth-form button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #00bfff;
+            border: none;
+            cursor: pointer;
+            color: white;
+            border-radius: 5px;
+        }
+
+        .auth-form button:disabled {
+            background-color: #555;
+        }
+
+        #error-message {
+            color: red;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        #login-btn, #place-bet {
+            font-size: 18px;
+        }
+
+        /* Admin panel styles */
+        .admin-panel {
+            display: none;
+            text-align: center;
+            background-color: #444;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .admin-panel input {
+            padding: 10px;
+            font-size: 18px;
+            margin: 10px;
+            width: 200px;
+        }
+
+        .admin-panel button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #00bfff;
+            border: none;
+            cursor: pointer;
+            color: white;
+            border-radius: 5px;
+        }
+
+        .admin-panel button:disabled {
+            background-color: #555;
+        }
+
+        .admin-message {
+            color: red;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
     </style>
 </head>
 <body>
-    <h1>Crash Game</h1>
-    <h2 id="coefficientDisplay">Коэффициент: 1.00x</h2>
-    <h3 id="timer">Новый раунд через: 5</h3>
-    <h3 id="balance">Баланс: 0 монет</h3>
+    <div class="auth-form" id="auth-form">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button id="login-btn">Login</button>
+        <div id="error-message"></div>
+    </div>
 
-    <input type="number" id="betAmount" placeholder="Сумма ставки">
-    <button onclick="placeBet()">Сделать ставку</button>
-    <button onclick="cashOut()">Вывести деньги</button>
+    <div class="container" id="game-container">
+        <h1>Crash Game</h1>
+        <canvas id="graph"></canvas>
+        <div class="balance">Balance: <span id="balance">0</span> coins</div>
+        <div class="bet">
+            <input type="number" id="bet" class="bet-input" placeholder="Bet" />
+            <button id="place-bet" class="btn">Place Bet</button>
+        </div>
+        <div id="timer"></div>
+    </div>
 
-    <h3>Последние 10 коэффициентов:</h3>
-    <div id="history"></div>
+    <!-- Admin Panel -->
+    <div class="admin-panel" id="admin-panel">
+        <h2>Admin Panel</h2>
+        <input type="password" id="admin-password" placeholder="Admin Password" />
+        <input type="number" id="admin-balance" placeholder="Amount to Add" />
+        <button id="add-balance-btn">Add Balance</button>
+        <div class="admin-message" id="admin-message"></div>
+    </div>
 
-    <div class="admin" onclick="showAdminPanel()">Админ</div>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        let user = null;
+        let balance = 0;
+        let betAmount = 0;
+        let gameInProgress = false;
+        let crashMultiplier = 1.01;
+        let timer = 5;
+        let gameInterval;
+        let betInterval;
+        let userRef;
+
+        // Admin password (hardcoded for simplicity)
+        const adminPassword = 'admin123';
+
+        // Function to start the game
+        function startGame() {
+            if (gameInProgress) return;
+            gameInProgress = true;
+            crashMultiplier = 1.01;
+            balance -= betAmount;
+            document.getElementById('balance').innerText = balance;
+
+            // Update graph
+            let graphData = [];
+            let multiplier = 1.01;
+            let graphInterval = setInterval(() => {
+                if (multiplier >= 1000) {
+                    clearInterval(graphInterval);
+                    gameInProgress = false;
+                    alert('Game Over! The multiplier reached 1000.');
+                } else {
+                    multiplier += 0.01;
+                    graphData.push(multiplier);
+                    updateGraph(graphData);
+                }
+            }, 100);
+        }
+
+        function updateGraph(data) {
+            let graph = document.getElementById('graph');
+            let ctx = graph.getContext('2d');
+            graph.width = graph.offsetWidth;
+            graph.height = 300;
+            ctx.clearRect(0, 0, graph.width, graph.height);
+            ctx.beginPath();
+            ctx.moveTo(0, graph.height - data[0]);
+
+            for (let i = 1; i < data.length; i++) {
+                ctx.lineTo(i * (graph.width / data.length), graph.height - data[i]);
+            }
+            ctx.strokeStyle = '#00ff00';
+            ctx.stroke();
+        }
+
+        // Login function
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            document.getElementById('error-message').innerText = '';
+
+            try {
+                await auth.signInWithEmailAndPassword(username, password);
+                user = auth.currentUser;
+                userRef = database.ref('users/' + user.uid);
+                userRef.once('value').then((snapshot) => {
+                    balance = snapshot.val().balance || 0;
+                    document.getElementById('balance').innerText = balance;
+                });
+                document.getElementById('auth-form').style.display = 'none';
+                document.getElementById('game-container').style.display = 'block';
+            } catch (error) {
+                document.getElementById('error-message').innerText = 'Login failed: ' + error.message;
+            }
+        });
+
+        // Place bet
+        document.getElementById('place-bet').addEventListener('click', () => {
+            betAmount = parseFloat(document.getElementById('bet').value);
+            if (betAmount <= 0) {
+                alert('Please enter a valid bet amount.');
+                return;
+            }
+            if (balance < betAmount) {
+                alert('You do not have enough balance.');
+                return;
+            }
+            startGame();
+        });
+
+        // Timer countdown for the game start
+        setInterval(() => {
+            if (timer > 0) {
+                document.getElementById('timer').innerText = `Next round starts in: ${timer}`;
+                timer--;
+            } else {
+                timer = 5;
+            }
+        }, 1000);
+
+        // Admin Panel Logic
+        document.getElementById('admin-password').addEventListener('input', () => {
+            const password = document.getElementById('admin-password').value;
+            if (password === adminPassword) {
+                document.getElementById('admin-panel').style.display = 'block';
+            } else {
+                document.getElementById('admin-panel').style.display = 'none';
+            }
+        });
+
+        // Add balance function
+        document.getElementById('add-balance-btn').addEventListener('click', () => {
+            const amount = parseFloat(document.getElementById('admin-balance').value);
+            if (isNaN(amount) || amount <= 0) {
+                document.getElementById('admin-message').innerText = 'Invalid amount.';
+                return;
+            }
+            balance += amount;
+            document.getElementById('balance').innerText = balance;
+            document.getElementById('admin-message').innerText = `Successfully added ${amount} coins to the balance.`;
+        });
+    </script>
 </body>
 </html>
