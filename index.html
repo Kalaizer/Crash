@@ -134,6 +134,7 @@
                 currentMultiplier += speed;
                 speed += 0.002;
                 document.getElementById('current-multiplier').innerText = currentMultiplier.toFixed(2) + "x";
+                drawGraph(currentMultiplier);
             }, 100);
 
             setTimeout(endGame, Math.random() * 8000 + 5000);
@@ -215,6 +216,23 @@
             balance += amount;
             updateBalance();
         });
+
+        function drawGraph(multiplier) {
+            let canvas = document.getElementById('graph');
+            let ctx = canvas.getContext('2d');
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "#ff9900";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            let x = canvas.width * (multiplier / 10);
+            let y = canvas.height - (canvas.height * (multiplier / 10));
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
 
         updateBalance();
         startGame();
