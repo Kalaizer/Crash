@@ -13,7 +13,6 @@
             margin: 0;
             padding: 20px;
         }
-
         .container {
             background: rgba(0, 0, 0, 0.8);
             padding: 20px;
@@ -21,11 +20,7 @@
             display: inline-block;
             box-shadow: 0 0 20px rgba(255, 165, 0, 0.8);
         }
-
-        h1 {
-            color: #ffcc00;
-        }
-
+        h1 { color: #ffcc00; }
         .button {
             background: #ffcc00;
             color: black;
@@ -36,11 +31,7 @@
             cursor: pointer;
             transition: 0.3s;
         }
-
-        .button:hover {
-            background: #ffaa00;
-        }
-
+        .button:hover { background: #ffaa00; }
         .input-field {
             font-size: 16px;
             padding: 8px;
@@ -49,7 +40,6 @@
             margin: 10px 0;
             width: 80%;
         }
-
         .history {
             margin-top: 20px;
             padding: 10px;
@@ -57,15 +47,6 @@
             border-radius: 5px;
             text-align: left;
         }
-
-        .admin-panel {
-            background: rgba(255, 165, 0, 0.2);
-            padding: 10px;
-            margin-top: 15px;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
         .timer {
             font-size: 20px;
             font-weight: bold;
@@ -85,21 +66,17 @@
         <div>Возможный выигрыш: <span id="potentialWin">0</span></div>
         <div class="timer">Следующий раунд через: <span id="timer">5</span> сек</div>
         <div class="history" id="history">История игр:</div>
-        <div class="admin-panel">
-            <button class="button" id="adminBtn">Панель Админа</button>
-            <input type="number" id="adminAmount" class="input-field" placeholder="Сколько добавить" />
-        </div>
     </div>
 
     <script>
         let balance = parseFloat(localStorage.getItem("balance")) || 0;
-        let currentCoefficient = parseFloat(localStorage.getItem("coefficient")) || 1.00;
+        let currentCoefficient = 1.00;
         let gameHistory = JSON.parse(localStorage.getItem("gameHistory")) || [];
         let isGameRunning = false;
         let betAmount = 0;
         let isBetPlaced = false;
         let interval;
-        let timer = 5;
+        let timer = parseInt(localStorage.getItem("timer")) || 5;
 
         const balanceText = document.getElementById("balance");
         const coefficientText = document.getElementById("coefficient");
@@ -109,15 +86,12 @@
         const potentialWinText = document.getElementById("potentialWin");
         const historyElement = document.getElementById("history");
         const timerElement = document.getElementById("timer");
-        const adminBtn = document.getElementById("adminBtn");
-        const adminAmountInput = document.getElementById("adminAmount");
 
         function updateUI() {
             balanceText.textContent = balance.toFixed(1);
             coefficientText.textContent = currentCoefficient.toFixed(2);
             potentialWinText.textContent = isBetPlaced ? (betAmount * currentCoefficient).toFixed(1) : 0;
             localStorage.setItem("balance", balance);
-            localStorage.setItem("coefficient", currentCoefficient);
         }
 
         function updateHistory() {
@@ -134,19 +108,15 @@
 
             let growthRate = 0.01;
             interval = setInterval(() => {
-                if (Math.random() < 0.01) { // Рандомный краш
-                    clearInterval(interval);
-                    endGame(false);
-                } else {
-                    currentCoefficient += growthRate;
-                    growthRate += 0.001; // Ускоряем рост коэффициента
-                    updateUI();
-                }
+                currentCoefficient += growthRate;
+                growthRate += 0.001;
+                updateUI();
             }, 100);
         }
 
         function endGame(win) {
             isGameRunning = false;
+            clearInterval(interval);
             if (win) {
                 balance += betAmount * currentCoefficient;
                 gameHistory.unshift(currentCoefficient.toFixed(2));
@@ -162,9 +132,11 @@
 
         function startTimer() {
             timer = 5;
+            localStorage.setItem("timer", timer);
             timerElement.textContent = timer;
             let countdown = setInterval(() => {
                 timer--;
+                localStorage.setItem("timer", timer);
                 timerElement.textContent = timer;
                 if (timer <= 0) {
                     clearInterval(countdown);
@@ -174,7 +146,14 @@
         }
 
         placeBetBtn.addEventListener("click", () => {
-            if (isBetPlaced || !isGameRunning) return;
+            if (isBetPlaced) {
+                alert("Вы уже сделали ставку!");
+                return;
+            }
+            if (isGameRunning) {
+                alert("Ставку можно делать только до начала игры!");
+                return;
+            }
             betAmount = parseFloat(betAmountInput.value);
             if (betAmount > 0 && betAmount <= balance) {
                 balance -= betAmount;
@@ -187,27 +166,19 @@
 
         cashOutBtn.addEventListener("click", () => {
             if (isBetPlaced && isGameRunning) {
-                clearInterval(interval);
                 endGame(true);
             }
         });
 
-        adminBtn.addEventListener("click", () => {
-            let password = prompt("Введите пароль:");
-            if (password === "1001") {
-                let addAmount = parseFloat(adminAmountInput.value);
-                if (!isNaN(addAmount)) {
-                    balance += addAmount;
-                    updateUI();
-                }
+        window.addEventListener("load", () => {
+            updateUI();
+            updateHistory();
+            if (timer > 0) {
+                startTimer();
             } else {
-                alert("Неверный пароль!");
+                startGame();
             }
         });
-
-        updateUI();
-        updateHistory();
-        startTimer();
     </script>
 </body>
 </html>
