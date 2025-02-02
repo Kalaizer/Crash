@@ -8,187 +8,216 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            background-color: #222;
+            background-color: #1a1a1a;
             color: #fff;
         }
 
         .container {
-            width: 80%;
+            max-width: 500px;
             margin: auto;
-            background-color: #333;
-            padding: 20px;
-            border-radius: 10px;
         }
 
-        button {
-            background-color: #ff9800;
-            border: none;
-            padding: 10px 20px;
-            color: white;
-            cursor: pointer;
-            margin: 10px;
+        #game-container {
+            padding: 10px;
+            border: 2px solid #ff9900;
+            border-radius: 5px;
+            margin-bottom: 10px;
         }
 
-        button:hover {
-            background-color: #e68900;
+        #graph-container {
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 200px;
+            background-color: #222;
+        }
+
+        #current-multiplier {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        #bet-panel input {
+            width: 80px;
+        }
+
+        #history {
+            text-align: left;
+            margin-top: 10px;
+        }
+
+        #timer {
+            font-size: 20px;
+            margin-top: 10px;
+            color: #ff9900;
         }
 
         #admin-panel {
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            background: #444;
-            padding: 10px;
-            border-radius: 5px;
+            margin-top: 20px;
         }
 
-        ul {
-            list-style: none;
-            padding: 0;
+        #admin-menu {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Crash Game</h1>
-        <div id="game-info">
-            <p>Текущий коэффициент: <span id="coefficient">1.00</span>×</p>
-            <p>Таймер: <span id="timer">5</span> сек</p>
+        
+        <div id="game-container">
+            <div id="graph-container">
+                <canvas id="graph"></canvas>
+                <div id="current-multiplier">1.00x</div>
+            </div>
+            <div id="bet-panel">
+                <input type="number" id="bet-amount" placeholder="Ставка">
+                <button id="place-bet">Поставить</button>
+                <button id="cash-out">Вывести</button>
+                <div id="potential-win">Возможный выигрыш: 0</div>
+            </div>
         </div>
-        <input type="number" id="bet-amount" placeholder="Введите ставку">
-        <button id="bet-button">Поставить</button>
-        <button id="cashout-button">Вывести</button>
-        <p>Возможный выигрыш: <span id="potential-win">0</span></p>
-        <p>Баланс: <span id="balance">0</span> монет</p>
 
-        <h2>История игр</h2>
-        <ul id="history"></ul>
+        <div id="history">
+            <h3>Последние 10 игр:</h3>
+            <ul id="history-list"></ul>
+        </div>
+
+        <div id="timer">Следующая игра через: <span id="countdown">5</span> сек</div>
 
         <div id="admin-panel">
-            <input type="password" id="admin-password" placeholder="Введите пароль">
-            <button id="admin-login">Войти</button>
-            <div id="admin-controls" style="display:none;">
-                <input type="number" id="admin-money" placeholder="Сколько монет добавить">
-                <button id="add-money">Добавить деньги</button>
+            <button id="admin-button">Админ</button>
+            <div id="admin-menu" class="hidden">
+                <input type="password" id="admin-password" placeholder="Пароль">
+                <button id="login-admin">Войти</button>
+                <input type="number" id="admin-balance" placeholder="Сколько добавить">
+                <button id="add-balance">Добавить</button>
             </div>
+        </div>
+
+        <div id="player-info">
+            Баланс: <span id="balance">0</span> монет
         </div>
     </div>
 
     <script>
         let balance = 0;
         let betAmount = 0;
-        let currentCoefficient = 1.00;
-        let isBetPlaced = false;
-        let isGameRunning = false;
+        let inGame = false;
+        let currentMultiplier = 1.00;
+        let gameInterval;
+        let countdown = 5;
         let history = [];
-        let timer = 5;
+        let adminAccess = false;
 
-        if (localStorage.getItem("balance")) {
-            balance = parseFloat(localStorage.getItem("balance"));
-            document.getElementById("balance").textContent = balance;
+        function updateBalance() {
+            document.getElementById('balance').innerText = balance.toFixed(1);
         }
-        if (localStorage.getItem("history")) {
-            history = JSON.parse(localStorage.getItem("history"));
+
+        function startGame() {
+            inGame = true;
+            currentMultiplier = 1.00;
+            document.getElementById('current-multiplier').innerText = currentMultiplier.toFixed(2) + "x";
+
+            let speed = 0.01;
+            gameInterval = setInterval(() => {
+                currentMultiplier += speed;
+                speed += 0.002;
+                document.getElementById('current-multiplier').innerText = currentMultiplier.toFixed(2) + "x";
+            }, 100);
+
+            setTimeout(endGame, Math.random() * 8000 + 5000);
+        }
+
+        function endGame() {
+            clearInterval(gameInterval);
+            history.unshift(currentMultiplier.toFixed(2));
+            if (history.length > 10) history.pop();
             updateHistory();
-        }
 
-        function startTimer() {
-            document.getElementById("timer").textContent = timer;
-            let countdown = setInterval(() => {
-                timer--;
-                document.getElementById("timer").textContent = timer;
-                if (timer <= 0) {
-                    clearInterval(countdown);
+            document.getElementById('countdown').innerText = countdown;
+            let timer = setInterval(() => {
+                countdown--;
+                document.getElementById('countdown').innerText = countdown;
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    countdown = 5;
                     startGame();
                 }
             }, 1000);
         }
 
-        function startGame() {
-            isGameRunning = true;
-            isBetPlaced = false;
-            currentCoefficient = 1.00;
-            document.getElementById("coefficient").textContent = currentCoefficient.toFixed(2);
-
-            let growthSpeed = 0.01;
-            let interval = setInterval(() => {
-                currentCoefficient += growthSpeed;
-                document.getElementById("coefficient").textContent = currentCoefficient.toFixed(2);
-                document.getElementById("potential-win").textContent = isBetPlaced ? (betAmount * currentCoefficient).toFixed(1) : 0;
-
-                if (Math.random() < 0.005 || currentCoefficient >= 10) {
-                    clearInterval(interval);
-                    endGame();
-                }
-            }, 100);
-        }
-
-        function endGame() {
-            isGameRunning = false;
-            history.unshift(currentCoefficient.toFixed(2) + "×");
-            if (history.length > 10) history.pop();
-            updateHistory();
-            localStorage.setItem("history", JSON.stringify(history));
-
-            timer = 5;
-            startTimer();
-        }
-
         function updateHistory() {
-            let historyList = document.getElementById("history");
-            historyList.innerHTML = "";
-            history.forEach(h => {
-                let li = document.createElement("li");
-                li.textContent = h;
-                historyList.appendChild(li);
+            let list = document.getElementById('history-list');
+            list.innerHTML = "";
+            history.forEach(mult => {
+                let li = document.createElement('li');
+                li.innerText = mult + "x";
+                list.appendChild(li);
             });
         }
 
-        document.getElementById("bet-button").addEventListener("click", () => {
-            if (isGameRunning) {
+        document.getElementById('place-bet').addEventListener('click', () => {
+            if (inGame) {
                 alert("Вы уже сделали ставку!");
                 return;
             }
-            betAmount = parseFloat(document.getElementById("bet-amount").value);
-            if (betAmount > 0 && betAmount <= balance) {
-                isBetPlaced = true;
-                balance -= betAmount;
-                document.getElementById("balance").textContent = balance.toFixed(1);
-                localStorage.setItem("balance", balance.toFixed(1));
-            } else {
-                alert("Недостаточно средств!");
+            betAmount = parseFloat(document.getElementById('bet-amount').value);
+            if (isNaN(betAmount) || betAmount <= 0 || betAmount > balance) {
+                alert("Некорректная ставка!");
+                return;
             }
+            balance -= betAmount;
+            updateBalance();
+            document.getElementById('potential-win').innerText = "Возможный выигрыш: " + (betAmount * currentMultiplier).toFixed(1);
         });
 
-        document.getElementById("cashout-button").addEventListener("click", () => {
-            if (isBetPlaced) {
-                let winnings = betAmount * currentCoefficient;
-                balance += winnings;
-                document.getElementById("balance").textContent = balance.toFixed(1);
-                localStorage.setItem("balance", balance.toFixed(1));
-                isBetPlaced = false;
-            }
+        document.getElementById('cash-out').addEventListener('click', () => {
+            if (!inGame || betAmount === 0) return;
+            let win = betAmount * currentMultiplier;
+            balance += win;
+            betAmount = 0;
+            updateBalance();
+            document.getElementById('potential-win').innerText = "Возможный выигрыш: 0";
         });
 
-        document.getElementById("admin-login").addEventListener("click", () => {
-            let password = document.getElementById("admin-password").value;
+        document.getElementById('admin-button').addEventListener('click', () => {
+            document.getElementById('admin-menu').classList.toggle('hidden');
+        });
+
+        document.getElementById('login-admin').addEventListener('click', () => {
+            let password = document.getElementById('admin-password').value;
             if (password === "1001") {
-                document.getElementById("admin-controls").style.display = "block";
+                adminAccess = true;
+                alert("Админ доступ открыт!");
             } else {
                 alert("Неверный пароль!");
             }
         });
 
-        document.getElementById("add-money").addEventListener("click", () => {
-            let amount = parseFloat(document.getElementById("admin-money").value);
-            if (!isNaN(amount) && amount > 0) {
-                balance += amount;
-                document.getElementById("balance").textContent = balance.toFixed(1);
-                localStorage.setItem("balance", balance.toFixed(1));
+        document.getElementById('add-balance').addEventListener('click', () => {
+            if (!adminAccess) return;
+            let amount = parseFloat(document.getElementById('admin-balance').value);
+            if (isNaN(amount) || amount <= 0) {
+                alert("Некорректное значение!");
+                return;
             }
+            balance += amount;
+            updateBalance();
         });
 
-        startTimer();
+        updateBalance();
+        startGame();
     </script>
 </body>
 </html>
