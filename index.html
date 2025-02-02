@@ -4,166 +4,119 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crash Game</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
-            background: linear-gradient(45deg, #ff4b2b, #ff416c);
-            color: white;
             font-family: Arial, sans-serif;
             text-align: center;
-            margin: 0;
-            padding: 20px;
+            background-color: #222;
+            color: #fff;
         }
+
         .container {
-            background: rgba(0, 0, 0, 0.8);
+            width: 80%;
+            margin: auto;
+            background-color: #333;
             padding: 20px;
             border-radius: 10px;
-            display: inline-block;
-            box-shadow: 0 0 20px rgba(255, 165, 0, 0.8);
         }
-        h1 { color: #ffcc00; }
-        .button {
-            background: #ffcc00;
-            color: black;
-            font-size: 16px;
-            padding: 10px;
+
+        button {
+            background-color: #ff9800;
             border: none;
-            border-radius: 5px;
+            padding: 10px 20px;
+            color: white;
             cursor: pointer;
-            transition: 0.3s;
+            margin: 10px;
         }
-        .button:hover { background: #ffaa00; }
-        .input-field {
-            font-size: 16px;
-            padding: 8px;
-            border-radius: 5px;
-            border: none;
-            margin: 10px 0;
-            width: 80%;
+
+        button:hover {
+            background-color: #e68900;
         }
-        .admin-panel {
+
+        #admin-panel {
             position: fixed;
             bottom: 10px;
             left: 10px;
-            background: rgba(0, 0, 0, 0.7);
+            background: #444;
             padding: 10px;
             border-radius: 5px;
-            text-align: left;
         }
-        .admin-panel input {
-            width: 80px;
-            margin-right: 5px;
-        }
-        .hidden { display: none; }
-        .history {
-            margin-top: 10px;
-            text-align: left;
-        }
-        #gameChart {
-            width: 100%;
-            max-width: 400px;
-            height: 200px;
+
+        ul {
+            list-style: none;
+            padding: 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Crash Game</h1>
-        <div>Баланс: <span id="balance">0</span></div>
-        <div>Коэффициент: <span id="coefficient">1.00</span>x</div>
-        <input type="number" id="betAmount" class="input-field" placeholder="Введите ставку" />
-        <button class="button" id="placeBetBtn">Поставить</button>
-        <button class="button" id="cashOutBtn">Вывести</button>
-        <div>Возможный выигрыш: <span id="potentialWin">0</span></div>
-        <canvas id="gameChart"></canvas>
-        <div class="history">
-            <h3>Последние 10 коэффициентов:</h3>
-            <ul id="historyList"></ul>
+        <div id="game-info">
+            <p>Текущий коэффициент: <span id="coefficient">1.00</span>×</p>
+            <p>Таймер: <span id="timer">5</span> сек</p>
         </div>
-    </div>
+        <input type="number" id="bet-amount" placeholder="Введите ставку">
+        <button id="bet-button">Поставить</button>
+        <button id="cashout-button">Вывести</button>
+        <p>Возможный выигрыш: <span id="potential-win">0</span></p>
+        <p>Баланс: <span id="balance">0</span> монет</p>
 
-    <!-- Панель администратора -->
-    <div class="admin-panel">
-        <button id="adminBtn" class="button">Админ</button>
-        <div id="adminControls" class="hidden">
-            <input type="number" id="adminAmount" class="input-field" placeholder="Сумма">
-            <button id="adminAddBtn" class="button">Добавить</button>
+        <h2>История игр</h2>
+        <ul id="history"></ul>
+
+        <div id="admin-panel">
+            <input type="password" id="admin-password" placeholder="Введите пароль">
+            <button id="admin-login">Войти</button>
+            <div id="admin-controls" style="display:none;">
+                <input type="number" id="admin-money" placeholder="Сколько монет добавить">
+                <button id="add-money">Добавить деньги</button>
+            </div>
         </div>
     </div>
 
     <script>
         let balance = 0;
-        let currentCoefficient = 1.00;
-        let isGameRunning = false;
         let betAmount = 0;
+        let currentCoefficient = 1.00;
         let isBetPlaced = false;
-        let adminAccess = false;
+        let isGameRunning = false;
         let history = [];
-        let gameInterval;
-        let chart;
-        let chartData = { labels: [], data: [] };
+        let timer = 5;
 
-        const balanceText = document.getElementById("balance");
-        const coefficientText = document.getElementById("coefficient");
-        const betAmountInput = document.getElementById("betAmount");
-        const placeBetBtn = document.getElementById("placeBetBtn");
-        const cashOutBtn = document.getElementById("cashOutBtn");
-        const potentialWinText = document.getElementById("potentialWin");
-        const adminBtn = document.getElementById("adminBtn");
-        const adminControls = document.getElementById("adminControls");
-        const adminAmountInput = document.getElementById("adminAmount");
-        const adminAddBtn = document.getElementById("adminAddBtn");
-        const historyList = document.getElementById("historyList");
-        const gameChart = document.getElementById("gameChart").getContext("2d");
+        if (localStorage.getItem("balance")) {
+            balance = parseFloat(localStorage.getItem("balance"));
+            document.getElementById("balance").textContent = balance;
+        }
+        if (localStorage.getItem("history")) {
+            history = JSON.parse(localStorage.getItem("history"));
+            updateHistory();
+        }
 
-        function updateUI() {
-            balanceText.textContent = balance.toFixed(1);
-            coefficientText.textContent = currentCoefficient.toFixed(2);
-            potentialWinText.textContent = isBetPlaced ? (betAmount * currentCoefficient).toFixed(1) : 0;
+        function startTimer() {
+            document.getElementById("timer").textContent = timer;
+            let countdown = setInterval(() => {
+                timer--;
+                document.getElementById("timer").textContent = timer;
+                if (timer <= 0) {
+                    clearInterval(countdown);
+                    startGame();
+                }
+            }, 1000);
         }
 
         function startGame() {
-            if (isGameRunning) return;
             isGameRunning = true;
             isBetPlaced = false;
             currentCoefficient = 1.00;
-            updateUI();
+            document.getElementById("coefficient").textContent = currentCoefficient.toFixed(2);
 
-            chartData.labels = [];
-            chartData.data = [];
-
-            let growthRate = 0.01;
-            let time = 0;
-
-            if (chart) chart.destroy();
-            chart = new Chart(gameChart, {
-                type: 'line',
-                data: {
-                    labels: chartData.labels,
-                    datasets: [{
-                        label: 'Коэффициент',
-                        data: chartData.data,
-                        borderColor: 'white',
-                        borderWidth: 2,
-                        fill: false,
-                        pointRadius: 0
-                    }]
-                },
-                options: { scales: { x: { display: false }, y: { min: 1 } } }
-            });
-
+            let growthSpeed = 0.01;
             let interval = setInterval(() => {
-                currentCoefficient += growthRate;
-                growthRate += 0.001;
-                time += 0.1;
+                currentCoefficient += growthSpeed;
+                document.getElementById("coefficient").textContent = currentCoefficient.toFixed(2);
+                document.getElementById("potential-win").textContent = isBetPlaced ? (betAmount * currentCoefficient).toFixed(1) : 0;
 
-                chartData.labels.push(time.toFixed(1));
-                chartData.data.push(currentCoefficient.toFixed(2));
-
-                chart.update();
-                updateUI();
-
-                if (currentCoefficient >= 100) {
+                if (Math.random() < 0.005 || currentCoefficient >= 10) {
                     clearInterval(interval);
                     endGame();
                 }
@@ -172,66 +125,70 @@
 
         function endGame() {
             isGameRunning = false;
-            history.unshift(currentCoefficient.toFixed(2));
+            history.unshift(currentCoefficient.toFixed(2) + "×");
             if (history.length > 10) history.pop();
             updateHistory();
-            setTimeout(startGame, 5000);
+            localStorage.setItem("history", JSON.stringify(history));
+
+            timer = 5;
+            startTimer();
         }
 
         function updateHistory() {
+            let historyList = document.getElementById("history");
             historyList.innerHTML = "";
-            history.forEach(coef => {
+            history.forEach(h => {
                 let li = document.createElement("li");
-                li.textContent = coef + "x";
+                li.textContent = h;
                 historyList.appendChild(li);
             });
         }
 
-        placeBetBtn.addEventListener("click", () => {
-            if (isBetPlaced) {
+        document.getElementById("bet-button").addEventListener("click", () => {
+            if (isGameRunning) {
                 alert("Вы уже сделали ставку!");
                 return;
             }
-            betAmount = parseFloat(betAmountInput.value);
+            betAmount = parseFloat(document.getElementById("bet-amount").value);
             if (betAmount > 0 && betAmount <= balance) {
-                balance -= betAmount;
                 isBetPlaced = true;
-                updateUI();
+                balance -= betAmount;
+                document.getElementById("balance").textContent = balance.toFixed(1);
+                localStorage.setItem("balance", balance.toFixed(1));
             } else {
-                alert("Неверная сумма ставки!");
+                alert("Недостаточно средств!");
             }
         });
 
-        cashOutBtn.addEventListener("click", () => {
-            if (isBetPlaced && isGameRunning) {
-                balance += betAmount * currentCoefficient;
+        document.getElementById("cashout-button").addEventListener("click", () => {
+            if (isBetPlaced) {
+                let winnings = betAmount * currentCoefficient;
+                balance += winnings;
+                document.getElementById("balance").textContent = balance.toFixed(1);
+                localStorage.setItem("balance", balance.toFixed(1));
                 isBetPlaced = false;
-                updateUI();
             }
         });
 
-        adminBtn.addEventListener("click", () => {
-            if (!adminAccess) {
-                let password = prompt("Введите пароль админа:");
-                if (password === "1001") {
-                    adminAccess = true;
-                    adminControls.classList.remove("hidden");
-                } else {
-                    alert("Неверный пароль!");
-                }
+        document.getElementById("admin-login").addEventListener("click", () => {
+            let password = document.getElementById("admin-password").value;
+            if (password === "1001") {
+                document.getElementById("admin-controls").style.display = "block";
             } else {
-                adminControls.classList.toggle("hidden");
+                alert("Неверный пароль!");
             }
         });
 
-        adminAddBtn.addEventListener("click", () => {
-            if (adminAccess) {
-                balance += parseFloat(adminAmountInput.value) || 0;
-                updateUI();
+        document.getElementById("add-money").addEventListener("click", () => {
+            let amount = parseFloat(document.getElementById("admin-money").value);
+            if (!isNaN(amount) && amount > 0) {
+                balance += amount;
+                document.getElementById("balance").textContent = balance.toFixed(1);
+                localStorage.setItem("balance", balance.toFixed(1));
             }
         });
 
-        window.addEventListener("load", startGame);
+        startTimer();
     </script>
 </body>
 </html>
