@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,310 +7,53 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #1e1e1e;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-
-        .container {
+            background-color: #f4f4f4;
+            color: #333;
             text-align: center;
-            width: 60%;
-            background-color: #333;
-            border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
         }
-
-        #graph {
-            width: 100%;
-            height: 300px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            background-color: #222;
-        }
-
-        .balance, .bet {
-            font-size: 24px;
-            margin: 10px 0;
-        }
-
-        .bet-input {
-            padding: 10px;
-            font-size: 20px;
-            width: 100px;
-            margin-right: 10px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            background-color: #ff6600;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 20px;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        .btn:disabled {
-            background-color: #555;
-        }
-
-        .btn:hover:not(:disabled) {
-            background-color: #e85c00;
-        }
-
-        #timer {
-            font-size: 30px;
-            margin-top: 10px;
-        }
-
-        .auth-form {
-            display: none;
-            text-align: center;
-        }
-
-        .auth-form input {
-            padding: 10px;
-            font-size: 18px;
-            margin: 10px;
-        }
-
-        .auth-form button {
-            padding: 10px 20px;
-            font-size: 18px;
-            background-color: #00bfff;
-            border: none;
-            cursor: pointer;
-            color: white;
-            border-radius: 5px;
-        }
-
-        .auth-form button:disabled {
-            background-color: #555;
-        }
-
-        #error-message {
-            color: red;
-            font-size: 18px;
-            margin-top: 10px;
-        }
-
-        #login-btn, #place-bet {
-            font-size: 18px;
-        }
-
-        /* Admin panel styles */
-        .admin-panel {
-            display: none;
-            text-align: center;
-            background-color: #444;
-            border-radius: 10px;
+        .game-container {
+            background-color: #fff;
             padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .bet-controls {
             margin-top: 20px;
         }
-
-        .admin-panel input {
-            padding: 10px;
-            font-size: 18px;
-            margin: 10px;
-            width: 200px;
-        }
-
-        .admin-panel button {
+        .bet-controls button {
             padding: 10px 20px;
-            font-size: 18px;
-            background-color: #00bfff;
+            margin: 5px;
             border: none;
-            cursor: pointer;
-            color: white;
             border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
         }
-
-        .admin-panel button:disabled {
-            background-color: #555;
+        .bet-controls button:hover {
+            background-color: #0056b3;
         }
-
-        .admin-message {
-            color: red;
-            font-size: 18px;
-            margin-top: 10px;
-        }
-
     </style>
 </head>
 <body>
-    <div class="auth-form" id="auth-form">
-        <h2>Login</h2>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button id="login-btn">Login</button>
-        <div id="error-message"></div>
-    </div>
-
-    <div class="container" id="game-container">
+    <div class="game-container">
         <h1>Crash Game</h1>
-        <canvas id="graph"></canvas>
-        <div class="balance">Balance: <span id="balance">0</span> coins</div>
-        <div class="bet">
-            <input type="number" id="bet" class="bet-input" placeholder="Bet" />
-            <button id="place-bet" class="btn">Place Bet</button>
+        <div id="game-status">Игра началась!</div>
+        <div class="bet-controls">
+            <button onclick="placeBet(1)">1+</button>
+            <button onclick="placeBet(10)">10+</button>
+            <button onclick="placeBet(100)">100+</button>
+            <button onclick="placeBet('all')">All</button>
         </div>
-        <div id="timer"></div>
+        <div id="bet-result"></div>
     </div>
-
-    <!-- Admin Panel -->
-    <div class="admin-panel" id="admin-panel">
-        <h2>Admin Panel</h2>
-        <input type="password" id="admin-password" placeholder="Admin Password" />
-        <input type="number" id="admin-balance" placeholder="Amount to Add" />
-        <button id="add-balance-btn">Add Balance</button>
-        <div class="admin-message" id="admin-message"></div>
-    </div>
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
 
     <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            databaseURL: "https://kalaizer-ebd63-default-rtdb.firebaseio.com/",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-        firebase.initializeApp(firebaseConfig);
-
-        const auth = firebase.auth();
-        const database = firebase.database();
-
-        let user = null;
-        let balance = 0;
-        let betAmount = 0;
-        let gameInProgress = false;
-        let crashMultiplier = 1.01;
-        let timer = 5;
-        let gameInterval;
-        let betInterval;
-        let userRef;
-
-        // Admin password (hardcoded for simplicity)
-        const adminPassword = 'admin123';
-
-        // Function to start the game
-        function startGame() {
-            if (gameInProgress) return;
-            gameInProgress = true;
-            crashMultiplier = 1.01;
-            balance -= betAmount;
-            document.getElementById('balance').innerText = balance;
-
-            // Update graph
-            let graphData = [];
-            let multiplier = 1.01;
-            let graphInterval = setInterval(() => {
-                if (multiplier >= 1000) {
-                    clearInterval(graphInterval);
-                    gameInProgress = false;
-                    alert('Game Over! The multiplier reached 1000.');
-                } else {
-                    multiplier += 0.01;
-                    graphData.push(multiplier);
-                    updateGraph(graphData);
-                }
-            }, 100);
+        function placeBet(amount) {
+            // Здесь должна быть логика обработки ставки
+            let result = `Ставка ${amount} принята!`;
+            document.getElementById('bet-result').innerText = result;
         }
-
-        function updateGraph(data) {
-            let graph = document.getElementById('graph');
-            let ctx = graph.getContext('2d');
-            graph.width = graph.offsetWidth;
-            graph.height = 300;
-            ctx.clearRect(0, 0, graph.width, graph.height);
-            ctx.beginPath();
-            ctx.moveTo(0, graph.height - data[0]);
-
-            for (let i = 1; i < data.length; i++) {
-                ctx.lineTo(i * (graph.width / data.length), graph.height - data[i]);
-            }
-            ctx.strokeStyle = '#00ff00';
-            ctx.stroke();
-        }
-
-        // Login function
-        document.getElementById('login-btn').addEventListener('click', async () => {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            document.getElementById('error-message').innerText = '';
-
-            try {
-                await auth.signInWithEmailAndPassword(username, password);
-                user = auth.currentUser;
-                userRef = database.ref('users/' + user.uid);
-                userRef.once('value').then((snapshot) => {
-                    balance = snapshot.val().balance || 0;
-                    document.getElementById('balance').innerText = balance;
-                });
-                document.getElementById('auth-form').style.display = 'none';
-                document.getElementById('game-container').style.display = 'block';
-            } catch (error) {
-                document.getElementById('error-message').innerText = 'Login failed: ' + error.message;
-            }
-        });
-
-        // Place bet
-        document.getElementById('place-bet').addEventListener('click', () => {
-            betAmount = parseFloat(document.getElementById('bet').value);
-            if (betAmount <= 0) {
-                alert('Please enter a valid bet amount.');
-                return;
-            }
-            if (balance < betAmount) {
-                alert('You do not have enough balance.');
-                return;
-            }
-            startGame();
-        });
-
-        // Timer countdown for the game start
-        setInterval(() => {
-            if (timer > 0) {
-                document.getElementById('timer').innerText = `Next round starts in: ${timer}`;
-                timer--;
-            } else {
-                timer = 5;
-            }
-        }, 1000);
-
-        // Admin Panel Logic
-        document.getElementById('admin-password').addEventListener('input', () => {
-            const password = document.getElementById('admin-password').value;
-            if (password === adminPassword) {
-                document.getElementById('admin-panel').style.display = 'block';
-            } else {
-                document.getElementById('admin-panel').style.display = 'none';
-            }
-        });
-
-        // Add balance function
-        document.getElementById('add-balance-btn').addEventListener('click', () => {
-            const amount = parseFloat(document.getElementById('admin-balance').value);
-            if (isNaN(amount) || amount <= 0) {
-                document.getElementById('admin-message').innerText = 'Invalid amount.';
-                return;
-            }
-            balance += amount;
-            document.getElementById('balance').innerText = balance;
-            document.getElementById('admin-message').innerText = `Successfully added ${amount} coins to the balance.`;
-        });
     </script>
 </body>
 </html>
