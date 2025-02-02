@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crash Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             background: linear-gradient(45deg, #ff4b2b, #ff416c);
@@ -54,6 +55,15 @@
             margin-right: 5px;
         }
         .hidden { display: none; }
+        .history {
+            margin-top: 10px;
+            text-align: left;
+        }
+        #gameChart {
+            width: 100%;
+            max-width: 400px;
+            height: 200px;
+        }
     </style>
 </head>
 <body>
@@ -65,6 +75,11 @@
         <button class="button" id="placeBetBtn">Поставить</button>
         <button class="button" id="cashOutBtn">Вывести</button>
         <div>Возможный выигрыш: <span id="potentialWin">0</span></div>
+        <canvas id="gameChart"></canvas>
+        <div class="history">
+            <h3>Последние 10 коэффициентов:</h3>
+            <ul id="historyList"></ul>
+        </div>
     </div>
 
     <!-- Панель администратора -->
@@ -83,6 +98,10 @@
         let betAmount = 0;
         let isBetPlaced = false;
         let adminAccess = false;
+        let history = [];
+        let gameInterval;
+        let chart;
+        let chartData = { labels: [], data: [] };
 
         const balanceText = document.getElementById("balance");
         const coefficientText = document.getElementById("coefficient");
@@ -94,6 +113,8 @@
         const adminControls = document.getElementById("adminControls");
         const adminAmountInput = document.getElementById("adminAmount");
         const adminAddBtn = document.getElementById("adminAddBtn");
+        const historyList = document.getElementById("historyList");
+        const gameChart = document.getElementById("gameChart").getContext("2d");
 
         function updateUI() {
             balanceText.textContent = balance.toFixed(1);
@@ -108,13 +129,62 @@
             currentCoefficient = 1.00;
             updateUI();
 
+            chartData.labels = [];
+            chartData.data = [];
+
             let growthRate = 0.01;
+            let time = 0;
+
+            if (chart) chart.destroy();
+            chart = new Chart(gameChart, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        label: 'Коэффициент',
+                        data: chartData.data,
+                        borderColor: 'white',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0
+                    }]
+                },
+                options: { scales: { x: { display: false }, y: { min: 1 } } }
+            });
+
             let interval = setInterval(() => {
                 currentCoefficient += growthRate;
                 growthRate += 0.001;
+                time += 0.1;
+
+                chartData.labels.push(time.toFixed(1));
+                chartData.data.push(currentCoefficient.toFixed(2));
+
+                chart.update();
                 updateUI();
-                if (currentCoefficient >= 1000) clearInterval(interval);
+
+                if (currentCoefficient >= 100) {
+                    clearInterval(interval);
+                    endGame();
+                }
             }, 100);
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            history.unshift(currentCoefficient.toFixed(2));
+            if (history.length > 10) history.pop();
+            updateHistory();
+            setTimeout(startGame, 5000);
+        }
+
+        function updateHistory() {
+            historyList.innerHTML = "";
+            history.forEach(coef => {
+                let li = document.createElement("li");
+                li.textContent = coef + "x";
+                historyList.appendChild(li);
+            });
         }
 
         placeBetBtn.addEventListener("click", () => {
