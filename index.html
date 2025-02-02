@@ -4,52 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crash Game</title>
-    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #222;
-            color: white;
-            text-align: center;
-        }
-        .container {
-            max-width: 400px;
-            margin: auto;
-            padding: 20px;
-            background: #333;
-            border-radius: 10px;
-        }
-        button {
-            padding: 10px;
-            margin: 10px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        canvas {
-            width: 100%;
-            height: 200px;
-            background: black;
-        }
-    </style>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Crash Game</h1>
-        <p>Баланс: <span id="balance">0</span> монет</p>
-        <p>Текущий коэффициент: <span id="coefficient">1.00</span>x</p>
-        <p>Последние 10 коэффициентов: <span id="history">-</span></p>
-        <p>Оставшееся время: <span id="timer">5</span> сек</p>
-        <button id="betBtn">Сделать ставку</button>
-        <button id="cashoutBtn">Вывести</button>
-        <p>Возможный выигрыш: <span id="potentialWin">0</span> монет</p>
+    <h1>Crash Game</h1>
+
+    <div id="game-container">
+        <p id="timer">До начала игры: <span id="countdown">5</span> сек</p>
+        <p>Текущий коэффициент: <span id="multiplier">1.00</span>x</p>
+        <canvas id="graphCanvas"></canvas>
+        <button id="cashout-btn" disabled>Вывести</button>
     </div>
 
-    <canvas id="graph"></canvas>
+    <div id="bet-container">
+        <input type="number" id="bet-amount" placeholder="Сумма ставки">
+        <button id="bet-btn">Поставить</button>
+        <p>Возможный выигрыш: <span id="potential-win">0</span></p>
+    </div>
+
+    <div id="history-container">
+        <h2>Последние 10 игр</h2>
+        <ul id="history-list"></ul>
+    </div>
+
+    <div id="admin-panel">
+        <button id="admin-btn">Админ</button>
+        <div id="admin-controls" style="display: none;">
+            <input type="password" id="admin-password" placeholder="Пароль">
+            <button id="admin-login">Войти</button>
+            <input type="number" id="admin-bonus" placeholder="Добавить баланс">
+            <button id="add-balance">Добавить</button>
+        </div>
+    </div>
 
     <script>
-        // Firebase конфигурация (замени своими данными)
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_AUTH_DOMAIN",
@@ -58,94 +49,101 @@
             messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
             appId: "YOUR_APP_ID"
         };
+
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const auth = firebase.auth();
 
         let balance = 0;
-        let betAmount = 10;
-        let currentCoeff = 1.00;
-        let gameActive = false;
-        let timer = 5;
-        let history = [];
-        let graphCanvas = document.getElementById("graph");
-        let ctx = graphCanvas.getContext("2d");
+        let gameRunning = false;
+        let currentMultiplier = 1.00;
+        let gameHistory = [];
+        let countdown = 5;
+        let gameTimer;
+        let countdownTimer;
 
-        // Функция отрисовки графика
-        function drawGraph() {
-            ctx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
-            ctx.strokeStyle = "lime";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(0, graphCanvas.height);
-            ctx.lineTo(graphCanvas.width * (currentCoeff / 5), graphCanvas.height * (1 - currentCoeff / 5));
-            ctx.stroke();
-        }
-
-        // Функция обновления коэффициента
-        function updateCoefficient() {
-            if (gameActive) {
-                currentCoeff += 0.01 * currentCoeff; // Увеличение с ускорением
-                document.getElementById("coefficient").innerText = currentCoeff.toFixed(2);
-                drawGraph();
-                setTimeout(updateCoefficient, 100);
-            }
-        }
-
-        // Функция старта игры
         function startGame() {
-            gameActive = true;
-            currentCoeff = 1.00;
-            document.getElementById("coefficient").innerText = "1.00";
-            drawGraph();
-            updateCoefficient();
-            setTimeout(() => {
-                gameActive = false;
-                history.push(currentCoeff.toFixed(2));
-                if (history.length > 10) history.shift();
-                document.getElementById("history").innerText = history.join(", ");
-                startTimer();
-            }, 5000);
+            gameRunning = true;
+            currentMultiplier = 1.00;
+            document.getElementById("bet-btn").disabled = true;
+            document.getElementById("cashout-btn").disabled = false;
+
+            let growthRate = 0.01;
+            gameTimer = setInterval(() => {
+                currentMultiplier += growthRate;
+                document.getElementById("multiplier").textContent = currentMultiplier.toFixed(2) + "x";
+                if (currentMultiplier >= 10) growthRate += 0.02;
+                if (currentMultiplier >= 50) growthRate += 0.05;
+                if (currentMultiplier >= 100) growthRate += 0.1;
+                if (currentMultiplier >= 500) growthRate += 0.2;
+                if (currentMultiplier >= 1000) stopGame();
+            }, 100);
         }
 
-        // Таймер перед запуском раунда
-        function startTimer() {
-            timer = 5;
-            document.getElementById("timer").innerText = timer;
-            let countdown = setInterval(() => {
-                timer--;
-                document.getElementById("timer").innerText = timer;
-                if (timer <= 0) {
-                    clearInterval(countdown);
+        function stopGame() {
+            clearInterval(gameTimer);
+            gameRunning = false;
+            document.getElementById("cashout-btn").disabled = true;
+            gameHistory.unshift(currentMultiplier.toFixed(2) + "x");
+            if (gameHistory.length > 10) gameHistory.pop();
+            updateHistory();
+            startCountdown();
+        }
+
+        function startCountdown() {
+            countdown = 5;
+            document.getElementById("countdown").textContent = countdown;
+            countdownTimer = setInterval(() => {
+                countdown--;
+                document.getElementById("countdown").textContent = countdown;
+                if (countdown <= 0) {
+                    clearInterval(countdownTimer);
                     startGame();
                 }
             }, 1000);
         }
 
-        // Ставка
-        document.getElementById("betBtn").addEventListener("click", () => {
-            if (!gameActive) {
-                alert("Подождите начала нового раунда!");
-                return;
-            }
+        function updateHistory() {
+            let historyList = document.getElementById("history-list");
+            historyList.innerHTML = "";
+            gameHistory.forEach(mult => {
+                let li = document.createElement("li");
+                li.textContent = mult;
+                historyList.appendChild(li);
+            });
+        }
+
+        document.getElementById("bet-btn").addEventListener("click", () => {
+            if (gameRunning) return alert("Вы уже сделали ставку!");
+            let betAmount = parseFloat(document.getElementById("bet-amount").value);
+            if (isNaN(betAmount) || betAmount <= 0) return alert("Введите корректную сумму");
             balance -= betAmount;
-            document.getElementById("balance").innerText = balance;
-            document.getElementById("potentialWin").innerText = (betAmount * currentCoeff).toFixed(2);
+            document.getElementById("potential-win").textContent = (betAmount * currentMultiplier).toFixed(2);
         });
 
-        // Вывод средств
-        document.getElementById("cashoutBtn").addEventListener("click", () => {
-            if (!gameActive) return;
-            balance += betAmount * currentCoeff;
-            document.getElementById("balance").innerText = balance;
-            gameActive = false;
-            startTimer();
+        document.getElementById("cashout-btn").addEventListener("click", () => {
+            balance += parseFloat(document.getElementById("potential-win").textContent);
+            stopGame();
         });
 
-        // Запуск первой игры
-        auth.signInAnonymously().then(() => {
-            startTimer();
+        document.getElementById("admin-btn").addEventListener("click", () => {
+            document.getElementById("admin-controls").style.display = "block";
         });
+
+        document.getElementById("admin-login").addEventListener("click", () => {
+            let password = document.getElementById("admin-password").value;
+            if (password === "1001") {
+                alert("Вход выполнен");
+            } else {
+                alert("Неверный пароль");
+            }
+        });
+
+        document.getElementById("add-balance").addEventListener("click", () => {
+            let amount = parseFloat(document.getElementById("admin-bonus").value);
+            if (!isNaN(amount) && amount > 0) balance += amount;
+        });
+
+        startCountdown();
     </script>
 </body>
 </html>
