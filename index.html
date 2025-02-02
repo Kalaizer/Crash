@@ -40,19 +40,20 @@
             margin: 10px 0;
             width: 80%;
         }
-        .history {
-            margin-top: 20px;
+        .admin-panel {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
             padding: 10px;
-            background: #333;
             border-radius: 5px;
             text-align: left;
         }
-        .timer {
-            font-size: 20px;
-            font-weight: bold;
-            color: #ffcc00;
-            margin-top: 10px;
+        .admin-panel input {
+            width: 80px;
+            margin-right: 5px;
         }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -64,19 +65,24 @@
         <button class="button" id="placeBetBtn">Поставить</button>
         <button class="button" id="cashOutBtn">Вывести</button>
         <div>Возможный выигрыш: <span id="potentialWin">0</span></div>
-        <div class="timer">Следующий раунд через: <span id="timer">5</span> сек</div>
-        <div class="history" id="history">История игр:</div>
+    </div>
+
+    <!-- Панель администратора -->
+    <div class="admin-panel">
+        <button id="adminBtn" class="button">Админ</button>
+        <div id="adminControls" class="hidden">
+            <input type="number" id="adminAmount" class="input-field" placeholder="Сумма">
+            <button id="adminAddBtn" class="button">Добавить</button>
+        </div>
     </div>
 
     <script>
-        let balance = parseFloat(localStorage.getItem("balance")) || 0;
+        let balance = 0;
         let currentCoefficient = 1.00;
-        let gameHistory = JSON.parse(localStorage.getItem("gameHistory")) || [];
         let isGameRunning = false;
         let betAmount = 0;
         let isBetPlaced = false;
-        let interval;
-        let timer = parseInt(localStorage.getItem("timer")) || 5;
+        let adminAccess = false;
 
         const balanceText = document.getElementById("balance");
         const coefficientText = document.getElementById("coefficient");
@@ -84,19 +90,15 @@
         const placeBetBtn = document.getElementById("placeBetBtn");
         const cashOutBtn = document.getElementById("cashOutBtn");
         const potentialWinText = document.getElementById("potentialWin");
-        const historyElement = document.getElementById("history");
-        const timerElement = document.getElementById("timer");
+        const adminBtn = document.getElementById("adminBtn");
+        const adminControls = document.getElementById("adminControls");
+        const adminAmountInput = document.getElementById("adminAmount");
+        const adminAddBtn = document.getElementById("adminAddBtn");
 
         function updateUI() {
             balanceText.textContent = balance.toFixed(1);
             coefficientText.textContent = currentCoefficient.toFixed(2);
             potentialWinText.textContent = isBetPlaced ? (betAmount * currentCoefficient).toFixed(1) : 0;
-            localStorage.setItem("balance", balance);
-        }
-
-        function updateHistory() {
-            historyElement.innerHTML = "История игр: " + gameHistory.join(", ");
-            localStorage.setItem("gameHistory", JSON.stringify(gameHistory));
         }
 
         function startGame() {
@@ -107,51 +109,17 @@
             updateUI();
 
             let growthRate = 0.01;
-            interval = setInterval(() => {
+            let interval = setInterval(() => {
                 currentCoefficient += growthRate;
                 growthRate += 0.001;
                 updateUI();
+                if (currentCoefficient >= 1000) clearInterval(interval);
             }, 100);
-        }
-
-        function endGame(win) {
-            isGameRunning = false;
-            clearInterval(interval);
-            if (win) {
-                balance += betAmount * currentCoefficient;
-                gameHistory.unshift(currentCoefficient.toFixed(2));
-            } else {
-                gameHistory.unshift(currentCoefficient.toFixed(2));
-            }
-            if (gameHistory.length > 10) gameHistory.pop();
-            updateHistory();
-            betAmount = 0;
-            updateUI();
-            startTimer();
-        }
-
-        function startTimer() {
-            timer = 5;
-            localStorage.setItem("timer", timer);
-            timerElement.textContent = timer;
-            let countdown = setInterval(() => {
-                timer--;
-                localStorage.setItem("timer", timer);
-                timerElement.textContent = timer;
-                if (timer <= 0) {
-                    clearInterval(countdown);
-                    startGame();
-                }
-            }, 1000);
         }
 
         placeBetBtn.addEventListener("click", () => {
             if (isBetPlaced) {
                 alert("Вы уже сделали ставку!");
-                return;
-            }
-            if (isGameRunning) {
-                alert("Ставку можно делать только до начала игры!");
                 return;
             }
             betAmount = parseFloat(betAmountInput.value);
@@ -166,19 +134,34 @@
 
         cashOutBtn.addEventListener("click", () => {
             if (isBetPlaced && isGameRunning) {
-                endGame(true);
+                balance += betAmount * currentCoefficient;
+                isBetPlaced = false;
+                updateUI();
             }
         });
 
-        window.addEventListener("load", () => {
-            updateUI();
-            updateHistory();
-            if (timer > 0) {
-                startTimer();
+        adminBtn.addEventListener("click", () => {
+            if (!adminAccess) {
+                let password = prompt("Введите пароль админа:");
+                if (password === "1001") {
+                    adminAccess = true;
+                    adminControls.classList.remove("hidden");
+                } else {
+                    alert("Неверный пароль!");
+                }
             } else {
-                startGame();
+                adminControls.classList.toggle("hidden");
             }
         });
+
+        adminAddBtn.addEventListener("click", () => {
+            if (adminAccess) {
+                balance += parseFloat(adminAmountInput.value) || 0;
+                updateUI();
+            }
+        });
+
+        window.addEventListener("load", startGame);
     </script>
 </body>
 </html>
