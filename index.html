@@ -8,7 +8,7 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            background: linear-gradient(to right, #ff9900, #ff3300);
+            background: linear-gradient(to right, #ff9900, #ff3300, #0066ff);
             color: #fff;
         }
 
@@ -29,6 +29,8 @@
             height: 200px;
             background: black;
             border-radius: 8px;
+            border: 2px solid #ffcc00;
+            padding: 10px;
         }
 
         canvas {
@@ -55,12 +57,12 @@
         }
 
         .bet-button {
-            background: #ffcc00;
-            color: #222;
+            background: #00cc66;
+            color: white;
         }
 
         .bet-button:hover {
-            background: #ffdd44;
+            background: #00ff88;
         }
 
         .cashout-button {
@@ -95,11 +97,25 @@
         .hidden {
             display: none;
         }
+
+        #balance-panel {
+            font-size: 24px;
+            padding: 10px;
+            background: linear-gradient(to right, #0066ff, #cc00ff);
+            border-radius: 8px;
+            margin: 10px 0;
+            color: white;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Crash Game</h1>
+
+        <div id="balance-panel">
+            Баланс: <span id="balance">0</span> монет
+        </div>
 
         <div id="game-container">
             <div id="graph-container">
@@ -130,10 +146,6 @@
                 <button id="add-balance" class="button">Добавить</button>
             </div>
         </div>
-
-        <div id="player-info">
-            Баланс: <span id="balance">0</span> монет
-        </div>
     </div>
 
     <script>
@@ -155,10 +167,10 @@
             currentMultiplier = 1.00;
             document.getElementById('current-multiplier').innerText = currentMultiplier.toFixed(2) + "x";
 
-            let speed = 0.01;
+            let speed = 0.005;
             gameInterval = setInterval(() => {
                 currentMultiplier += speed;
-                speed += 0.002;
+                speed += 0.0005;
                 document.getElementById('current-multiplier').innerText = currentMultiplier.toFixed(2) + "x";
                 drawGraph(currentMultiplier);
             }, 100);
@@ -218,37 +230,19 @@
             document.getElementById('potential-win').innerText = "Возможный выигрыш: 0";
         });
 
-        document.getElementById('admin-button').addEventListener('click', () => {
-            document.getElementById('admin-menu').classList.toggle('hidden');
-        });
-
-        document.getElementById('login-admin').addEventListener('click', () => {
-            let password = document.getElementById('admin-password').value;
-            if (password === "1001") {
-                adminAccess = true;
-                alert("Админ доступ открыт!");
-            } else {
-                alert("Неверный пароль!");
-            }
-        });
-
-        document.getElementById('add-balance').addEventListener('click', () => {
-            if (!adminAccess) return;
-            let amount = parseFloat(document.getElementById('admin-balance').value);
-            if (isNaN(amount) || amount <= 0) {
-                alert("Некорректное значение!");
-                return;
-            }
-            balance += amount;
-            updateBalance();
-        });
-
         function drawGraph(multiplier) {
             let canvas = document.getElementById('graph');
             let ctx = canvas.getContext('2d');
             canvas.width = canvas.clientWidth;
             canvas.height = canvas.clientHeight;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = "#ffcc00";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(canvas.width, canvas.height - multiplier * 5);
+            ctx.stroke();
         }
 
         updateBalance();
