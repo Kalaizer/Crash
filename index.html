@@ -1,235 +1,213 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crash Game</title>
-  <style>
-    body {
-      background: linear-gradient(to bottom, #1a1a1a, #292929);
-      color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crash Game</title>
+    <style>
+        body {
+            background: linear-gradient(45deg, #ff4b2b, #ff416c);
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
 
-    .container {
-      background: #222;
-      padding: 20px;
-      border-radius: 10px;
-      display: inline-block;
-      box-shadow: 0 0 10px rgba(255, 111, 0, 0.7);
-    }
+        .container {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+            box-shadow: 0 0 20px rgba(255, 165, 0, 0.8);
+        }
 
-    h1 {
-      color: #ff6f00;
-      text-shadow: 0px 0px 10px #ff6f00;
-    }
+        h1 {
+            color: #ffcc00;
+        }
 
-    .button {
-      background: linear-gradient(to right, #ff9800, #ff6f00);
-      border: none;
-      padding: 10px 20px;
-      font-size: 1.2em;
-      margin: 10px;
-      cursor: pointer;
-      border-radius: 5px;
-      color: #fff;
-      transition: 0.3s;
-    }
+        .button {
+            background: #ffcc00;
+            color: black;
+            font-size: 16px;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
 
-    .button:hover {
-      background: linear-gradient(to right, #ffb74d, #ff6f00);
-    }
+        .button:hover {
+            background: #ffaa00;
+        }
 
-    .history {
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #333;
-      border-radius: 5px;
-      max-width: 300px;
-      margin-left: auto;
-      margin-right: auto;
-    }
+        .input-field {
+            font-size: 16px;
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            margin: 10px 0;
+            width: 80%;
+        }
 
-    .admin-panel {
-      margin-top: 10px;
-      background-color: #333;
-      padding: 5px;
-      border-radius: 5px;
-      width: 180px;
-      margin: 10px auto;
-      font-size: 0.9em;
-    }
+        .history {
+            margin-top: 20px;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+            text-align: left;
+        }
 
-    input {
-      padding: 5px;
-      margin: 3px;
-      border-radius: 5px;
-      font-size: 1em;
-      text-align: center;
-    }
-  </style>
+        .admin-panel {
+            background: rgba(255, 165, 0, 0.2);
+            padding: 10px;
+            margin-top: 15px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .timer {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffcc00;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>Crash Game</h1>
+        <div>Баланс: <span id="balance">0</span></div>
+        <div>Коэффициент: <span id="coefficient">1.00</span>x</div>
+        <input type="number" id="betAmount" class="input-field" placeholder="Введите ставку" />
+        <button class="button" id="placeBetBtn">Поставить</button>
+        <button class="button" id="cashOutBtn">Вывести</button>
+        <div>Возможный выигрыш: <span id="potentialWin">0</span></div>
+        <div class="timer">Следующий раунд через: <span id="timer">5</span> сек</div>
+        <div class="history" id="history">История игр:</div>
+        <div class="admin-panel">
+            <button class="button" id="adminBtn">Панель Админа</button>
+            <input type="number" id="adminAmount" class="input-field" placeholder="Сколько добавить" />
+        </div>
+    </div>
 
-  <div class="container">
-    <h1>Crash Game</h1>
-    <p id="timer">Следующая игра через: 5 секунд</p>
-    <input type="number" id="betAmount" placeholder="Введите ставку">
-    <button class="button" id="placeBetBtn" disabled>Поставить</button>
-    <button class="button" id="withdrawBtn" disabled>Вывести</button>
-    <p id="balance">Баланс: 0.0</p>
-    <p id="currentCoefficient">Коэффициент: 1.00x</p>
-    <p id="predictedWin">Возможный выигрыш: 0.00</p>
-    <div id="history" class="history">История последних игр:</div>
-  </div>
+    <script>
+        let balance = parseFloat(localStorage.getItem("balance")) || 0;
+        let currentCoefficient = parseFloat(localStorage.getItem("coefficient")) || 1.00;
+        let gameHistory = JSON.parse(localStorage.getItem("gameHistory")) || [];
+        let isGameRunning = false;
+        let betAmount = 0;
+        let isBetPlaced = false;
+        let interval;
+        let timer = 5;
 
-  <div class="admin-panel">
-    <h3>Админ</h3>
-    <input type="password" id="adminPassword" placeholder="Пароль">
-    <input type="number" id="adminAmount" placeholder="Сумма">
-    <button class="button" id="adminAddMoney">+</button>
-  </div>
+        const balanceText = document.getElementById("balance");
+        const coefficientText = document.getElementById("coefficient");
+        const betAmountInput = document.getElementById("betAmount");
+        const placeBetBtn = document.getElementById("placeBetBtn");
+        const cashOutBtn = document.getElementById("cashOutBtn");
+        const potentialWinText = document.getElementById("potentialWin");
+        const historyElement = document.getElementById("history");
+        const timerElement = document.getElementById("timer");
+        const adminBtn = document.getElementById("adminBtn");
+        const adminAmountInput = document.getElementById("adminAmount");
 
-  <script>
-    let balance = parseFloat(localStorage.getItem('balance')) || 0;
-    let betAmount = 0;
-    let activeBet = null;
-    let currentCoefficient = 1.00;
-    let gameInProgress = false;
-    let gameHistory = JSON.parse(localStorage.getItem('gameHistory')) || [];
-    let countdown = 5;
-    const MAX_COEFFICIENT = 1000;
-    const ADMIN_PASSWORD = '1001';
-
-    const betAmountInput = document.getElementById('betAmount');
-    const placeBetBtn = document.getElementById('placeBetBtn');
-    const withdrawBtn = document.getElementById('withdrawBtn');
-    const balanceText = document.getElementById('balance');
-    const currentCoefficientText = document.getElementById('currentCoefficient');
-    const predictedWinText = document.getElementById('predictedWin');
-    const historyElement = document.getElementById('history');
-    const timerElement = document.getElementById('timer');
-    const adminPasswordInput = document.getElementById('adminPassword');
-    const adminAmountInput = document.getElementById('adminAmount');
-    const adminAddMoneyBtn = document.getElementById('adminAddMoney');
-
-    function roundToTenth(num) {
-      return Math.round(num * 10) / 10;
-    }
-
-    function updateBalanceDisplay() {
-      balanceText.textContent = `Баланс: ${roundToTenth(balance)} рублей`;
-      localStorage.setItem('balance', balance);
-    }
-
-    function updateHistory() {
-      historyElement.innerHTML = `История последних игр:<br>` + gameHistory.map(c => `<p>${c}x</p>`).join('');
-      localStorage.setItem('gameHistory', JSON.stringify(gameHistory));
-    }
-
-    function startCountdown() {
-      countdown = 5;
-      timerElement.textContent = `Следующая игра через: ${countdown} секунд`;
-      placeBetBtn.disabled = false;
-      betAmountInput.disabled = false;
-
-      let countdownInterval = setInterval(() => {
-        countdown--;
-        timerElement.textContent = `Следующая игра через: ${countdown} секунд`;
-
-        if (countdown <= 0) {
-          clearInterval(countdownInterval);
-          timerElement.textContent = `Игра началась!`;
-          startGame();
+        function updateUI() {
+            balanceText.textContent = balance.toFixed(1);
+            coefficientText.textContent = currentCoefficient.toFixed(2);
+            potentialWinText.textContent = isBetPlaced ? (betAmount * currentCoefficient).toFixed(1) : 0;
+            localStorage.setItem("balance", balance);
+            localStorage.setItem("coefficient", currentCoefficient);
         }
-      }, 1000);
-    }
 
-    function startGame() {
-      if (gameInProgress) return;
-      gameInProgress = true;
-      currentCoefficient = 1.00;
-      placeBetBtn.disabled = true;
-      betAmountInput.disabled = true;
-      withdrawBtn.disabled = false;
-
-      let speed = 100;
-      let interval = setInterval(() => {
-        let increment = Math.min(0.01 + (currentCoefficient - 1) * 0.005, 1);
-        currentCoefficient += increment;
-        currentCoefficientText.textContent = `Коэффициент: ${currentCoefficient.toFixed(2)}x`;
-        updatePredictedWin();
-
-        speed = Math.max(10, speed * 0.98);
-        clearInterval(interval);
-        interval = setInterval(arguments.callee, speed);
-
-        if (currentCoefficient >= MAX_COEFFICIENT) {
-          clearInterval(interval);
-          endGame();
+        function updateHistory() {
+            historyElement.innerHTML = "История игр: " + gameHistory.join(", ");
+            localStorage.setItem("gameHistory", JSON.stringify(gameHistory));
         }
-      }, speed);
 
-      setTimeout(() => {
-        clearInterval(interval);
-        endGame();
-      }, Math.random() * 7000 + 5000);
-    }
+        function startGame() {
+            if (isGameRunning) return;
+            isGameRunning = true;
+            isBetPlaced = false;
+            currentCoefficient = 1.00;
+            updateUI();
 
-    function endGame() {
-      gameInProgress = false;
-      withdrawBtn.disabled = true;
-      let finalCoefficient = parseFloat(currentCoefficient.toFixed(2));
+            let growthRate = 0.01;
+            interval = setInterval(() => {
+                if (Math.random() < 0.01) { // Рандомный краш
+                    clearInterval(interval);
+                    endGame(false);
+                } else {
+                    currentCoefficient += growthRate;
+                    growthRate += 0.001; // Ускоряем рост коэффициента
+                    updateUI();
+                }
+            }, 100);
+        }
 
-      if (!gameHistory.includes(finalCoefficient)) {
-        gameHistory.unshift(finalCoefficient);
-        if (gameHistory.length > 10) gameHistory.pop();
-      }
+        function endGame(win) {
+            isGameRunning = false;
+            if (win) {
+                balance += betAmount * currentCoefficient;
+                gameHistory.unshift(currentCoefficient.toFixed(2));
+            } else {
+                gameHistory.unshift(currentCoefficient.toFixed(2));
+            }
+            if (gameHistory.length > 10) gameHistory.pop();
+            updateHistory();
+            betAmount = 0;
+            updateUI();
+            startTimer();
+        }
 
-      updateHistory();
-      startCountdown();
-    }
+        function startTimer() {
+            timer = 5;
+            timerElement.textContent = timer;
+            let countdown = setInterval(() => {
+                timer--;
+                timerElement.textContent = timer;
+                if (timer <= 0) {
+                    clearInterval(countdown);
+                    startGame();
+                }
+            }, 1000);
+        }
 
-    function updatePredictedWin() {
-      if (activeBet > 0) {
-        predictedWinText.textContent = `Возможный выигрыш: ${roundToTenth(activeBet * currentCoefficient)}`;
-      } else {
-        predictedWinText.textContent = `Возможный выигрыш: 0.00`;
-      }
-    }
+        placeBetBtn.addEventListener("click", () => {
+            if (isBetPlaced || !isGameRunning) return;
+            betAmount = parseFloat(betAmountInput.value);
+            if (betAmount > 0 && betAmount <= balance) {
+                balance -= betAmount;
+                isBetPlaced = true;
+                updateUI();
+            } else {
+                alert("Неверная сумма ставки!");
+            }
+        });
 
-    placeBetBtn.addEventListener('click', function() {
-      let bet = parseFloat(betAmountInput.value);
-      if (bet <= 0 || bet > balance) return;
+        cashOutBtn.addEventListener("click", () => {
+            if (isBetPlaced && isGameRunning) {
+                clearInterval(interval);
+                endGame(true);
+            }
+        });
 
-      activeBet = bet;
-      balance -= bet;
-      updateBalanceDisplay();
-    });
+        adminBtn.addEventListener("click", () => {
+            let password = prompt("Введите пароль:");
+            if (password === "1001") {
+                let addAmount = parseFloat(adminAmountInput.value);
+                if (!isNaN(addAmount)) {
+                    balance += addAmount;
+                    updateUI();
+                }
+            } else {
+                alert("Неверный пароль!");
+            }
+        });
 
-    withdrawBtn.addEventListener('click', function() {
-      if (!gameInProgress || activeBet === null) return;
-
-      let winnings = roundToTenth(activeBet * currentCoefficient);
-      balance += winnings;
-      updateBalanceDisplay();
-      activeBet = null;
-    });
-
-    adminAddMoneyBtn.addEventListener('click', function() {
-      if (adminPasswordInput.value === ADMIN_PASSWORD) {
-        balance += parseFloat(adminAmountInput.value);
-        updateBalanceDisplay();
-      }
-    });
-
-    updateBalanceDisplay();
-    updateHistory();
-    startCountdown();
-  </script>
-
+        updateUI();
+        updateHistory();
+        startTimer();
+    </script>
 </body>
 </html>
