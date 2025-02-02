@@ -4,218 +4,152 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crash Game</title>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // 🔥 ТВОЯ КОНФИГУРАЦИЯ FIREBASE (ЗАМЕНИ ДАННЫМИ ИЗ FIREBASE)
+        const firebaseConfig = {
+            apiKey: "ТВОЙ_API_KEY",
+            authDomain: "ТВОЙ_AUTH_DOMAIN",
+            projectId: "ТВОЙ_PROJECT_ID",
+            storageBucket: "ТВОЙ_STORAGE_BUCKET",
+            messagingSenderId: "ТВОЙ_MESSAGING_SENDER_ID",
+            appId: "ТВОЙ_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Ссылки на данные Firebase
+        const gameRef = doc(db, "game", "current");
+        const historyRef = collection(db, "history");
+        const userBalanceRef = doc(db, "users", "user1");
+
+        let balance = 0;
+        let betAmount = 0;
+        let isBetPlaced = false;
+        let coefficient = 1.0;
+        let interval;
+        let timer = 5;
+
+        // 🔥 Запуск нового раунда
+        async function startGame() {
+            coefficient = 1.0;
+            timer = 5;
+            document.getElementById("timer").innerText = `Новый раунд через: ${timer}`;
+            
+            let countdown = setInterval(() => {
+                timer--;
+                document.getElementById("timer").innerText = `Новый раунд через: ${timer}`;
+                if (timer === 0) clearInterval(countdown);
+            }, 1000);
+
+            await new Promise(resolve => setTimeout(resolve, 5000));
+
+            interval = setInterval(async () => {
+                coefficient += 0.01;
+                await setDoc(gameRef, { coefficient: coefficient }, { merge: true });
+
+                if (coefficient >= 10) stopGame();
+            }, 100);
+        }
+
+        // 🔥 Остановить игру
+        async function stopGame() {
+            clearInterval(interval);
+            document.getElementById("history").innerHTML += `<p>${coefficient.toFixed(2)}x</p>`;
+            await addDoc(historyRef, { coefficient: coefficient });
+
+            isBetPlaced = false;
+            setTimeout(startGame, 5000);
+        }
+
+        // 🔥 Обновление коэффициента в реальном времени
+        onSnapshot(gameRef, (doc) => {
+            if (doc.exists()) {
+                coefficient = doc.data().coefficient;
+                document.getElementById("coefficientDisplay").innerText = `Коэффициент: ${coefficient.toFixed(2)}x`;
+            }
+        });
+
+        // 🔥 Обновление баланса
+        onSnapshot(userBalanceRef, (doc) => {
+            if (doc.exists()) {
+                balance = doc.data().balance;
+                document.getElementById("balance").innerText = `Баланс: ${balance.toFixed(1)} монет`;
+            }
+        });
+
+        // 🔥 Сделать ставку
+        async function placeBet() {
+            if (isBetPlaced) {
+                alert("Вы уже сделали ставку!");
+                return;
+            }
+
+            let inputAmount = parseFloat(document.getElementById("betAmount").value);
+            if (isNaN(inputAmount) || inputAmount <= 0 || inputAmount > balance) {
+                alert("Неверная сумма ставки!");
+                return;
+            }
+
+            betAmount = inputAmount;
+            balance -= betAmount;
+            isBetPlaced = true;
+
+            await setDoc(userBalanceRef, { balance: balance }, { merge: true });
+        }
+
+        // 🔥 Вывести деньги
+        async function cashOut() {
+            if (!isBetPlaced) return;
+            balance += betAmount * coefficient;
+            isBetPlaced = false;
+
+            await setDoc(userBalanceRef, { balance: balance }, { merge: true });
+        }
+
+        // 🔥 Панель администратора
+        function showAdminPanel() {
+            let password = prompt("Введите пароль:");
+            if (password === "1001") {
+                let amount = parseFloat(prompt("Введите сумму для добавления:"));
+                if (!isNaN(amount) && amount > 0) {
+                    setDoc(userBalanceRef, { balance: balance + amount }, { merge: true });
+                }
+            } else {
+                alert("Неверный пароль!");
+            }
+        }
+
+        window.placeBet = placeBet;
+        window.cashOut = cashOut;
+        window.showAdminPanel = showAdminPanel;
+
+        startGame(); // Запускаем игру
+    </script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #1a1a1a;
-            color: white;
-        }
-        h1 { color: #ff8c00; }
-        #game-container {
-            padding: 20px;
-            background: #333;
-            border-radius: 10px;
-            display: inline-block;
-        }
-        #multiplier {
-            font-size: 32px;
-            color: #ff4500;
-            font-weight: bold;
-        }
-        #graphCanvas {
-            background: black;
-            border: 1px solid white;
-            display: block;
-            margin: 10px auto;
-        }
-        button {
-            background: #ff8c00;
-            border: none;
-            padding: 10px 20px;
-            font-size: 18px;
-            color: white;
-            cursor: pointer;
-            margin: 5px;
-            border-radius: 5px;
-        }
-        button:disabled {
-            background: #555;
-            cursor: not-allowed;
-        }
-        #history-container {
-            margin-top: 20px;
-            background: #222;
-            padding: 10px;
-            border-radius: 10px;
-        }
-        #history-list { list-style: none; padding: 0; }
-        #history-list li {
-            background: #444;
-            padding: 5px;
-            margin: 2px;
-            border-radius: 5px;
-        }
-        #admin-panel {
-            margin-top: 20px;
-            text-align: center;
-        }
+        body { text-align: center; font-family: Arial, sans-serif; background-color: #222; color: #fff; }
+        button { margin: 5px; padding: 10px 20px; background: orange; border: none; cursor: pointer; }
+        input { padding: 10px; }
+        .admin { position: fixed; bottom: 10px; right: 10px; background: red; padding: 5px 10px; cursor: pointer; }
     </style>
 </head>
 <body>
     <h1>Crash Game</h1>
+    <h2 id="coefficientDisplay">Коэффициент: 1.00x</h2>
+    <h3 id="timer">Новый раунд через: 5</h3>
+    <h3 id="balance">Баланс: 0 монет</h3>
 
-    <div id="game-container">
-        <p id="timer">До начала игры: <span id="countdown">5</span> сек</p>
-        <p>Текущий коэффициент: <span id="multiplier">1.00</span>x</p>
-        <canvas id="graphCanvas" width="400" height="200"></canvas>
-        <button id="cashout-btn" disabled>Вывести</button>
-    </div>
+    <input type="number" id="betAmount" placeholder="Сумма ставки">
+    <button onclick="placeBet()">Сделать ставку</button>
+    <button onclick="cashOut()">Вывести деньги</button>
 
-    <div id="bet-container">
-        <input type="number" id="bet-amount" placeholder="Сумма ставки">
-        <button id="bet-btn">Поставить</button>
-        <p>Возможный выигрыш: <span id="potential-win">0</span></p>
-    </div>
+    <h3>Последние 10 коэффициентов:</h3>
+    <div id="history"></div>
 
-    <div id="history-container">
-        <h2>Последние 10 игр</h2>
-        <ul id="history-list"></ul>
-    </div>
-
-    <div id="admin-panel">
-        <button id="admin-btn">Админ</button>
-        <div id="admin-controls" style="display: none;">
-            <input type="password" id="admin-password" placeholder="Пароль">
-            <button id="admin-login">Войти</button>
-            <input type="number" id="admin-bonus" placeholder="Добавить баланс">
-            <button id="add-balance">Добавить</button>
-        </div>
-    </div>
-
-    <script>
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        let balance = 0;
-        let gameRunning = false;
-        let currentMultiplier = 1.00;
-        let gameHistory = [];
-        let countdown = 5;
-        let gameTimer;
-        let countdownTimer;
-
-        function startGame() {
-            gameRunning = true;
-            currentMultiplier = 1.00;
-            document.getElementById("bet-btn").disabled = true;
-            document.getElementById("cashout-btn").disabled = false;
-
-            let growthRate = 0.01;
-            gameTimer = setInterval(() => {
-                currentMultiplier += growthRate;
-                document.getElementById("multiplier").textContent = currentMultiplier.toFixed(2) + "x";
-                drawGraph(currentMultiplier);
-
-                if (currentMultiplier >= 10) growthRate += 0.02;
-                if (currentMultiplier >= 50) growthRate += 0.05;
-                if (currentMultiplier >= 100) growthRate += 0.1;
-                if (currentMultiplier >= 500) growthRate += 0.2;
-                if (currentMultiplier >= 1000) stopGame();
-            }, 100);
-        }
-
-        function stopGame() {
-            clearInterval(gameTimer);
-            gameRunning = false;
-            document.getElementById("cashout-btn").disabled = true;
-            gameHistory.unshift(currentMultiplier.toFixed(2) + "x");
-            if (gameHistory.length > 10) gameHistory.pop();
-            updateHistory();
-            startCountdown();
-        }
-
-        function startCountdown() {
-            countdown = 5;
-            document.getElementById("countdown").textContent = countdown;
-            countdownTimer = setInterval(() => {
-                countdown--;
-                document.getElementById("countdown").textContent = countdown;
-                if (countdown <= 0) {
-                    clearInterval(countdownTimer);
-                    startGame();
-                }
-            }, 1000);
-        }
-
-        function updateHistory() {
-            let historyList = document.getElementById("history-list");
-            historyList.innerHTML = "";
-            gameHistory.forEach(mult => {
-                let li = document.createElement("li");
-                li.textContent = mult;
-                historyList.appendChild(li);
-            });
-        }
-
-        function drawGraph(multiplier) {
-            let canvas = document.getElementById("graphCanvas");
-            let ctx = canvas.getContext("2d");
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            ctx.beginPath();
-            ctx.moveTo(0, canvas.height);
-            let y = canvas.height - (multiplier * 5);
-            ctx.lineTo(canvas.width, y < 0 ? 0 : y);
-            ctx.strokeStyle = "#ff8c00";
-            ctx.lineWidth = 3;
-            ctx.stroke();
-        }
-
-        document.getElementById("bet-btn").addEventListener("click", () => {
-            if (gameRunning) return alert("Вы уже сделали ставку!");
-            let betAmount = parseFloat(document.getElementById("bet-amount").value);
-            if (isNaN(betAmount) || betAmount <= 0) return alert("Введите корректную сумму");
-            balance -= betAmount;
-            document.getElementById("potential-win").textContent = (betAmount * currentMultiplier).toFixed(2);
-        });
-
-        document.getElementById("cashout-btn").addEventListener("click", () => {
-            balance += parseFloat(document.getElementById("potential-win").textContent);
-            stopGame();
-        });
-
-        document.getElementById("admin-btn").addEventListener("click", () => {
-            document.getElementById("admin-controls").style.display = "block";
-        });
-
-        document.getElementById("admin-login").addEventListener("click", () => {
-            let password = document.getElementById("admin-password").value;
-            if (password === "1001") {
-                alert("Вход выполнен");
-            } else {
-                alert("Неверный пароль");
-            }
-        });
-
-        document.getElementById("add-balance").addEventListener("click", () => {
-            let amount = parseFloat(document.getElementById("admin-bonus").value);
-            if (!isNaN(amount) && amount > 0) balance += amount;
-        });
-
-        startCountdown();
-    </script>
+    <div class="admin" onclick="showAdminPanel()">Админ</div>
 </body>
 </html>
